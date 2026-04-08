@@ -162,7 +162,7 @@ const CORE_TEAM = CONTACTS.filter(c => c.priority === "primary");
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-const fmt = (n,d=1) => n==null?"—":(n>=0?"+":"")+n.toFixed(d);
+const fmt = (n: number | null, d: number = 1) => n==null?"—":(n>=0?"+":"")+n.toFixed(d);
 const SEV_COLOR = {critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#22c55e"};
 const SEV_BG = {critical:"rgba(239,68,68,0.12)",high:"rgba(249,115,22,0.10)",medium:"rgba(234,179,8,0.10)",low:"rgba(34,197,94,0.10)"};
 const SENT_COLOR = {positive:"#22c55e",negative:"#ef4444",mixed:"#eab308",neutral:"#94a3b8"};
