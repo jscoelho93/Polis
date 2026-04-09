@@ -595,7 +595,7 @@ function NarrativesScreen() {
     }
     setLoading(true);setError(null);
     try{
-      const res=await fetch("/api/narratives");
+      const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
       const text=await res.text();
       let data;
       try{ data=JSON.parse(text); }
@@ -638,16 +638,24 @@ function NarrativesScreen() {
         </div>
         {sel===n.id&&<div><Divider/>
           <div style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>{n.detail}</div>
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}><Badge label={n.corr} color="#94a3b8" bg="rgba(51,65,85,0.4)"/></div>
-          <SL>Source influence</SL>
-          {n.sources.map((s,i)=>(
+          {n.corr&&<div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}><Badge label={n.corr} color="#94a3b8" bg="rgba(51,65,85,0.4)"/></div>}
+          {n.sources&&n.sources.length>0&&<><SL>Source influence</SL>
+          {n.sources.map((s:any,i:number)=>(
             <div key={i} style={{display:"flex",gap:10,alignItems:"center",marginBottom:5}}>
-              <div style={{fontSize:10}}>{TYPE_ICON[s.type]}</div>
+              <div style={{fontSize:10}}>{TYPE_ICON[s.type]||"📰"}</div>
               <div style={{width:160,fontSize:11,color:"#94a3b8"}}>{s.name}</div>
               <div style={{flex:1}}><MiniBar val={s.share} max={100} color="#3b82f6" h={5}/></div>
               <div style={{fontSize:11,color:"#94a3b8",width:30,textAlign:"right"}}>{s.share}%</div>
             </div>
-          ))}
+          ))}</>}
+          {n.articleUrls&&n.articleUrls.length>0&&<><Divider/><SL>Source articles</SL>
+          {n.articleUrls.map((url:string,i:number)=>(
+            <div key={i} style={{marginBottom:6}}>
+              <a href={url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#3b82f6",wordBreak:"break-all",textDecoration:"none"}}>
+                → {url.replace(/https?:\/\/(www\.)?/,"").slice(0,80)}{url.length>80?"...":""}
+              </a>
+            </div>
+          ))}</>}
         </div>}
       </Card>
     ))}
