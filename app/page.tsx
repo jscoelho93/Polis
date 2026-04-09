@@ -595,7 +595,7 @@ function NarrativesScreen() {
     }
     setLoading(true);setError(null);
     try{
-      const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
+      const res=await fetch("/api/narratives");
       const text=await res.text();
       let data;
       try{ data=JSON.parse(text); }
