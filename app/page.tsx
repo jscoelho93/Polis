@@ -595,8 +595,8 @@ function NarrativesScreen() {
     }
     setLoading(true);setError(null);
     try{
-      const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
-      const text=await res.text();
+      const res=await fetch("/api/narratives");
+            const text=await res.text();
       let data;
       try{ data=JSON.parse(text); }
       catch(e){ throw new Error("Raw response: "+text.slice(0,300)); }
