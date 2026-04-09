@@ -582,10 +582,12 @@ function NarrativesScreen() {
   const fetchLive=async()=>{
     setLoading(true);setError(null);
     try{
-      const base=typeof window!=="undefined"?window.location.origin:"";
-      const res=await fetch(`${base}/api/narratives`);
-      const data=await res.json();
-      if(data.error) throw new Error(data.error);
+      const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
+      const text=await res.text();
+      let data;
+      try{ data=JSON.parse(text); }
+      catch(e){ throw new Error("Raw response: "+text.slice(0,300)); }
+      if(data.error) throw new Error(data.error+(data.detail?JSON.stringify(data.detail):"")+(data.raw?" raw:"+data.raw:""));
       setLiveNarratives(data.narratives);
       setFetchedAt(data.fetchedAt);
     }catch(e:any){setError(e.message);}
