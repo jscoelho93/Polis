@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getReach, formatReach } from "./reach";
 
 export const maxDuration = 30;
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET() {
   try {
@@ -13,22 +19,20 @@ export async function GET() {
         .then(r => r.json()).then(d => d.articles || []).catch(() => [])
     ));
 
-    const allArticles = results.flat().map((a: any) => ({
+    const all = results.flat();
+    const unique = Array.from(new Map(all.map((a: any) => [a.url, {
       title: a.title,
       source: a.source?.name,
       url: a.url,
       publishedAt: a.publishedAt,
-    }));
+    }])).values());
 
-    const unique = Array.from(new Map(allArticles.map((a: any) => [a.url, a])).values());
-    const totalArticles = unique.length;
-
-    const prompt = `Analyze these ${totalArticles} news articles about Georgia Senate 2026. Cluster them into 3-4 narratives. Return ONLY a raw JSON array, no markdown.
+    const prompt = `Analyze these ${unique.length} news articles about Georgia Senate 2026. Cluster them into 3-4 narratives. Return ONLY a raw JSON array, no markdown.
 
 Articles:
 ${unique.slice(0, 15).map((a: any, i) => `${i+1}. [${a.source}] "${a.title}" — ${a.url}`).join("\n")}
 
-For each narrative, list the exact article numbers (from the list above) that belong to it in an "articleIndices" array (0-based), and list the article URLs in "articleUrls".
+For each narrative, list the exact article indices (0-based) in "articleIndices" and article URLs in "articleUrls".
 
 Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentences.","articleIndices":[0,2,4],"articleUrls":["url1","url2"]}]`;
 
@@ -53,13 +57,19 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
     if (start === -1 || end === -1) throw new Error("No JSON: " + raw.slice(0, 200));
 
     const clusters = JSON.parse(raw.slice(start, end + 1));
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Fetch yesterday's snapshots for velocity calculation
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const { data: yesterdaySnapshots } = await supabase
+      .from("narrative_snapshots")
+      .select("label, article_count")
+      .gte("fetched_at", yesterday + "T00:00:00Z")
+      .lt("fetched_at", today + "T00:00:00Z");
 
     const narratives = clusters.map((n: any) => {
-      // Get actual articles for this narrative
       const indices: number[] = n.articleIndices || [];
       const narrativeArticles = indices.map((i: number) => unique[i]).filter(Boolean);
-      
-      // Real volume = actual article count
       const vol = narrativeArticles.length;
 
       // Real source counts
@@ -68,7 +78,6 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
         if (a.source) sourceCounts[a.source] = (sourceCounts[a.source] || 0) + 1;
       });
 
-      // Real source shares
       const sources = Object.entries(sourceCounts).map(([name, count]) => ({
         name,
         type: "newspaper",
@@ -78,23 +87,35 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
         reachFormatted: formatReach(getReach(name)),
       })).sort((a, b) => b.count - a.count);
 
-      // Velocity placeholder until we have Supabase
-      const vel = Math.round((vol / Math.max(totalArticles, 1)) * 40) - 5;
+      // Real velocity from Supabase
+      const yesterdayMatch = yesterdaySnapshots?.find(s =>
+        s.label.toLowerCase().includes(n.label.toLowerCase().slice(0, 20)) ||
+        n.label.toLowerCase().includes(s.label.toLowerCase().slice(0, 20))
+      );
+      const yesterdayCount = yesterdayMatch?.article_count || 0;
+      const vel = vol - yesterdayCount;
 
-      return {
-        ...n,
-        vol,
-        vel,
-        sources,
-        articleUrls: n.articleUrls || [],
-      };
+      return { ...n, vol, vel, sources, articleUrls: n.articleUrls || [] };
     }).sort((a: any, b: any) => b.vol - a.vol);
 
-    return NextResponse.json({ 
-      narratives, 
-      articleCount: totalArticles, 
-      fetchedAt: new Date().toISOString() 
+    // Save today's snapshot to Supabase
+    const snapshots = narratives.map((n: any) => ({
+      narrative_id: n.id,
+      label: n.label,
+      article_count: n.vol,
+      sentiment: n.sentiment,
+      sources: n.sources,
+      fetched_at: new Date().toISOString(),
+    }));
+
+    await supabase.from("narrative_snapshots").insert(snapshots);
+
+    return NextResponse.json({
+      narratives,
+      articleCount: unique.length,
+      fetchedAt: new Date().toISOString(),
     });
+
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
