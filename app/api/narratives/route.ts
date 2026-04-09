@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 30;
 
+
+
 export async function GET() {
   try {
     const newsRes = await fetch(
       `https://newsapi.org/v2/everything?q=Georgia+Senate+2026&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`,
-      { cache: "no-store" }
+      { next: { revalidate: 43200 } }
+
     );
     const newsData = await newsRes.json();
     
