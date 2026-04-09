@@ -582,7 +582,8 @@ function NarrativesScreen() {
   const fetchLive=async()=>{
     setLoading(true);setError(null);
     try{
-      const res=await fetch("/api/narratives");
+      const base=typeof window!=="undefined"?window.location.origin:"";
+      const res=await fetch(`${base}/api/narratives`);
       const data=await res.json();
       if(data.error) throw new Error(data.error);
       setLiveNarratives(data.narratives);
