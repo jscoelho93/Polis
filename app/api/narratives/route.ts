@@ -4,12 +4,12 @@ import { getReach, formatReach } from "./reach";
 
 export const maxDuration = 30;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export async function GET() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   try {
     const results = await Promise.all([
       "Jon Ossoff Georgia Senate",
