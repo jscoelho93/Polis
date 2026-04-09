@@ -162,7 +162,7 @@ const CORE_TEAM = CONTACTS.filter(c => c.priority === "primary");
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
-const fmt = (n: number | null, d: number = 1) => n==null?"—":(n>=0?"+":"")+n.toFixed(d);
+const fmt = (n,d=1) => n==null?"—":(n>=0?"+":"")+n.toFixed(d);
 const SEV_COLOR = {critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#22c55e"};
 const SEV_BG = {critical:"rgba(239,68,68,0.12)",high:"rgba(249,115,22,0.10)",medium:"rgba(234,179,8,0.10)",low:"rgba(34,197,94,0.10)"};
 const SENT_COLOR = {positive:"#22c55e",negative:"#ef4444",mixed:"#eab308",neutral:"#94a3b8"};
@@ -574,8 +574,33 @@ function PollingVaultScreen() {
 
 function NarrativesScreen() {
   const [sel,setSel]=useState(null);
+  const [liveNarratives,setLiveNarratives]=useState<any[]|null>(null);
+  const [loading,setLoading]=useState(false);
+  const [fetchedAt,setFetchedAt]=useState<string|null>(null);
+  const [error,setError]=useState<string|null>(null);
+
+  const fetchLive=async()=>{
+    setLoading(true);setError(null);
+    try{
+      const res=await fetch("/api/narratives");
+      const data=await res.json();
+      if(data.error) throw new Error(data.error);
+      setLiveNarratives(data.narratives);
+      setFetchedAt(data.fetchedAt);
+    }catch(e:any){setError(e.message);}
+    setLoading(false);
+  };
+
+  const displayed=liveNarratives||NARRATIVES;
+
   return <div style={{maxWidth:720}}>
-    {NARRATIVES.map(n=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      <div style={{fontSize:11,color:"#64748b"}}>{liveNarratives?`${liveNarratives.length} live narratives · fetched ${new Date(fetchedAt!).toLocaleTimeString()}`:`${NARRATIVES.length} seed narratives · not yet live`}</div>
+      <div onClick={fetchLive} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>{loading?"Fetching live data...":"Fetch live narratives"}</div>
+    </div>
+    {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
+
+    {displayed.map((n:any)=>(
       <Card key={n.id} style={{marginBottom:8,cursor:"pointer",border:`1px solid ${sel===n.id?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`}}>
         <div onClick={()=>setSel(sel===n.id?null:n.id)}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
