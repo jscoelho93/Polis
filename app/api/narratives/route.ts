@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getReach, formatReach } from "./reach";
 
 export const maxDuration = 30;
 
@@ -47,8 +48,14 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","vol":70,"vel":15,"de
     const start = raw.indexOf("[");
     const end = raw.lastIndexOf("]");
     if (start === -1 || end === -1) throw new Error("No JSON: " + raw.slice(0, 200));
-    const narratives = JSON.parse(raw.slice(start, end + 1));
-
+    const narratives = JSON.parse(raw.slice(start, end + 1)).map((n: any) => ({
+  ...n,
+  sources: n.sources?.map((s: any) => ({
+    ...s,
+    reach: getReach(s.name),
+    reachFormatted: formatReach(getReach(s.name)),
+  })),
+}));
     return NextResponse.json({ narratives, articleCount: unique.length, fetchedAt: new Date().toISOString() });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

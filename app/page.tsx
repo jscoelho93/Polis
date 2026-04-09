@@ -595,7 +595,7 @@ function NarrativesScreen() {
     }
     setLoading(true);setError(null);
     try{
-      const res=await fetch("/api/narratives");
+      const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
       const text=await res.text();
       let data;
       try{ data=JSON.parse(text); }
@@ -646,6 +646,7 @@ function NarrativesScreen() {
               <div style={{width:160,fontSize:11,color:"#94a3b8"}}>{s.name}</div>
               <div style={{flex:1}}><MiniBar val={s.share} max={100} color="#3b82f6" h={5}/></div>
               <div style={{fontSize:11,color:"#94a3b8",width:30,textAlign:"right"}}>{s.share}%</div>
+              {s.reachFormatted&&<div style={{fontSize:10,color:"#475569",width:40}}>{s.reachFormatted}</div>}
             </div>
           ))}</>}
           {n.articleUrls&&n.articleUrls.length>0&&<><Divider/><SL>Source articles</SL>
