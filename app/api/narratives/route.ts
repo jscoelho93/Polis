@@ -9,7 +9,7 @@ const KEYWORDS = [
 
 async function fetchNews(query: string) {
   const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await fetch(url, { cache: "no-store" });
   const data = await res.json();
   return data.articles || [];
 }
