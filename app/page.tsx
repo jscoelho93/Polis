@@ -579,7 +579,20 @@ function NarrativesScreen() {
   const [fetchedAt,setFetchedAt]=useState<string|null>(null);
   const [error,setError]=useState<string|null>(null);
 
-  const fetchLive=async()=>{
+  const fetchLive=async(force=false)=>{
+    const CACHE_KEY="polis_narratives";
+    const CACHE_TS="polis_narratives_ts";
+    const TWELVE_HOURS=12*60*60*1000;
+    if(!force){
+      const cached=sessionStorage.getItem(CACHE_KEY);
+      const ts=sessionStorage.getItem(CACHE_TS);
+      if(cached&&ts&&Date.now()-parseInt(ts)<TWELVE_HOURS){
+        const d=JSON.parse(cached);
+        setLiveNarratives(d.narratives);
+        setFetchedAt(d.fetchedAt);
+        return;
+      }
+    }
     setLoading(true);setError(null);
     try{
       const res=await fetch("https://polis.jsatirocoelho.com/api/narratives");
@@ -587,7 +600,9 @@ function NarrativesScreen() {
       let data;
       try{ data=JSON.parse(text); }
       catch(e){ throw new Error("Raw response: "+text.slice(0,300)); }
-      if(data.error) throw new Error(data.error+(data.detail?JSON.stringify(data.detail):"")+(data.raw?" raw:"+data.raw:""));
+      if(data.error) throw new Error(data.error);
+      sessionStorage.setItem(CACHE_KEY,JSON.stringify(data));
+      sessionStorage.setItem(CACHE_TS,Date.now().toString());
       setLiveNarratives(data.narratives);
       setFetchedAt(data.fetchedAt);
     }catch(e:any){setError(e.message);}
@@ -599,7 +614,10 @@ function NarrativesScreen() {
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
       <div style={{fontSize:11,color:"#64748b"}}>{liveNarratives?`${liveNarratives.length} live narratives · fetched ${new Date(fetchedAt!).toLocaleTimeString()}`:`${NARRATIVES.length} seed narratives · not yet live`}</div>
-      <div onClick={fetchLive} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>{loading?"Fetching live data...":"Fetch live narratives"}</div>
+      <div style={{display:"flex",gap:6}}>
+        <div onClick={()=>fetchLive(false)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>{loading?"Fetching...":"Fetch live narratives"}</div>
+        <div onClick={()=>fetchLive(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"transparent",border:"1px solid rgba(51,65,85,0.5)",fontSize:11,color:"#475569"}}>Force refresh</div>
+      </div>
     </div>
     {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
 
