@@ -4,54 +4,57 @@ import { getReach, formatReach } from "./reach";
 
 export const maxDuration = 30;
 
-
 export async function GET() {
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!
   );
   try {
-const [newsApiResults, guardianResults] = await Promise.all([
-  // NewsAPI
-  Promise.all([
-    "Jon Ossoff Georgia Senate",
-    "Mike Collins Georgia Senate",
-    "Georgia Senate race 2026",
-    "Georgia politics Ossoff",
-    "Collins inflation Georgia",
-  ].map(q =>
-    fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
-      .then(r => r.json()).then(d => (d.articles || []).map((a: any) => ({ title: a.title, source: a.source?.name, url: a.url, publishedAt: a.publishedAt }))).catch(() => [])
-  )),
-  // Guardian API
-  Promise.all([
-    "Jon Ossoff",
-    "Georgia Senate 2026",
-    "Mike Collins Georgia",
-    "Georgia politics",
-    "Georgia Medicaid",
-  ].map(q =>
-    fetch(`https://content.guardianapis.com/search?q=${encodeURIComponent(q)}&api-key=${process.env.GUARDIAN_API_KEY}&page-size=20&show-fields=headline&order-by=newest`, { cache: "no-store" })
-      .then(r => r.json()).then(d => (d.response?.results || []).map((a: any) => ({ title: a.webTitle, source: "The Guardian", url: a.webUrl, publishedAt: a.webPublicationDate }))).catch(() => [])
-  )),
-]);
+    const [newsApiResults, guardianResults] = await Promise.all([
+      Promise.all([
+        "Jon Ossoff Georgia Senate",
+        "Mike Collins Georgia Senate",
+        "Georgia Senate race 2026",
+        "Georgia politics Ossoff",
+        "Collins inflation Georgia",
+      ].map(q =>
+        fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
+          .then(r => r.json()).then(d => (d.articles || []).map((a: any) => ({ title: a.title, source: a.source?.name, url: a.url, publishedAt: a.publishedAt }))).catch(() => [])
+      )),
+      Promise.all([
+        "Jon Ossoff",
+        "Georgia Senate 2026",
+        "Mike Collins Georgia",
+        "Georgia politics",
+        "Georgia Medicaid",
+      ].map(q =>
+        fetch(`https://content.guardianapis.com/search?q=${encodeURIComponent(q)}&api-key=${process.env.GUARDIAN_API_KEY}&page-size=50&show-fields=headline&order-by=newest`, { cache: "no-store" })
+          .then(r => r.json()).then(d => (d.response?.results || []).map((a: any) => ({ title: a.webTitle, source: "The Guardian", url: a.webUrl, publishedAt: a.webPublicationDate }))).catch(() => [])
+      )),
+    ]);
 
-const all = [...newsApiResults.flat(), ...guardianResults.flat()];
+    const all = [...newsApiResults.flat(), ...guardianResults.flat()];
     const unique = Array.from(new Map(all.map((a: any) => [a.url, {
       title: a.title,
-      source: a.source?.name,
+      source: a.source?.name || "The Guardian",
       url: a.url,
       publishedAt: a.publishedAt,
     }])).values());
 
-    const prompt = `Analyze these ${unique.length} news articles about Georgia Senate 2026. Cluster them into 3-4 narratives. Return ONLY a raw JSON array, no markdown.
+    const prompt = `You are a political intelligence analyst for Sen. Jon Ossoff's 2026 Georgia Senate campaign. Analyze these ${unique.length} news articles and cluster them into 4-6 SPECIFIC Georgia-focused narratives. Each narrative must be directly relevant to the Georgia Senate race.
 
 Articles:
 ${unique.slice(0, 40).map((a: any, i) => `${i+1}. [${a.source}] "${a.title}" — ${a.url}`).join("\n")}
 
-For each narrative, list the exact article indices (0-based) in "articleIndices" and article URLs in "articleUrls".
+Rules:
+- Every narrative must mention Georgia, Ossoff, Collins, or a Georgia-specific issue
+- Label must be specific and actionable (e.g. "Collins votes against Savannah port funding" not "Republican issues")
+- sentiment must be positive, negative, mixed, or neutral FROM OSSOFF'S PERSPECTIVE
+- Include only articles genuinely relevant to Georgia 2026
+- List article indices in "articleIndices" (0-based) and URLs in "articleUrls"
 
-Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentences.","articleIndices":[0,2,4],"articleUrls":["url1","url2"]}]`;
+Return ONLY a raw JSON array, no markdown:
+[{"id":"n1","label":"specific Georgia-focused title","sentiment":"positive","detail":"Two sentences specific to Georgia 2026.","articleIndices":[0,2,4],"articleUrls":["url1","url2"]}]`;
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -75,9 +78,8 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
 
     const clusters = JSON.parse(raw.slice(start, end + 1));
     const today = new Date().toISOString().slice(0, 10);
-
-    // Fetch yesterday's snapshots for velocity calculation
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
     const { data: yesterdaySnapshots } = await supabase
       .from("narrative_snapshots")
       .select("label, article_count")
@@ -89,7 +91,6 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
       const narrativeArticles = indices.map((i: number) => unique[i]).filter(Boolean);
       const vol = narrativeArticles.length;
 
-      // Real source counts
       const sourceCounts: Record<string, number> = {};
       narrativeArticles.forEach((a: any) => {
         if (a.source) sourceCounts[a.source] = (sourceCounts[a.source] || 0) + 1;
@@ -104,7 +105,6 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
         reachFormatted: formatReach(getReach(name)),
       })).sort((a, b) => b.count - a.count);
 
-      // Real velocity from Supabase
       const yesterdayMatch = yesterdaySnapshots?.find(s =>
         s.label.toLowerCase().includes(n.label.toLowerCase().slice(0, 20)) ||
         n.label.toLowerCase().includes(s.label.toLowerCase().slice(0, 20))
@@ -115,7 +115,6 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
       return { ...n, vol, vel, sources, articleUrls: n.articleUrls || [] };
     }).sort((a: any, b: any) => b.vol - a.vol);
 
-    // Save today's snapshot to Supabase
     const snapshots = narratives.map((n: any) => ({
       narrative_id: n.id,
       label: n.label,
