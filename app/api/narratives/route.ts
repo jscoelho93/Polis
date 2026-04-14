@@ -47,7 +47,7 @@ const all = [...newsApiResults.flat(), ...guardianResults.flat()];
     const prompt = `Analyze these ${unique.length} news articles about Georgia Senate 2026. Cluster them into 3-4 narratives. Return ONLY a raw JSON array, no markdown.
 
 Articles:
-${unique.slice(0, 15).map((a: any, i) => `${i+1}. [${a.source}] "${a.title}" — ${a.url}`).join("\n")}
+${unique.slice(0, 40).map((a: any, i) => `${i+1}. [${a.source}] "${a.title}" — ${a.url}`).join("\n")}
 
 For each narrative, list the exact article indices (0-based) in "articleIndices" and article URLs in "articleUrls".
 
@@ -62,7 +62,7 @@ Format: [{"id":"n1","label":"title","sentiment":"positive","detail":"Two sentenc
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 1500,
+        max_tokens: 2500,
         messages: [{ role: "user", content: prompt }],
       }),
     });
