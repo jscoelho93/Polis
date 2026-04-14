@@ -11,13 +11,21 @@ export async function GET() {
     process.env.SUPABASE_ANON_KEY!
   );
   try {
-    const results = await Promise.all([
-      "Jon Ossoff Georgia Senate",
-      "Georgia Senate 2026",
-    ].map(q =>
-      fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
-        .then(r => r.json()).then(d => d.articles || []).catch(() => [])
-    ));
+   const results = await Promise.all([
+  "Jon Ossoff Georgia Senate",
+  "Mike Collins Georgia Senate",
+  "Georgia Senate race 2026",
+  "Georgia politics Ossoff",
+  "Georgia Medicaid healthcare Ossoff",
+  "Georgia jobs infrastructure Ossoff",
+  "Collins inflation Georgia",
+  "Georgia voting rights 2026",
+  "Georgia Senate primary Republican",
+  "Ossoff Collins poll Georgia",
+].map(q =>
+  fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
+    .then(r => r.json()).then(d => d.articles || []).catch(() => [])
+));
 
     const all = results.flat();
     const unique = Array.from(new Map(all.map((a: any) => [a.url, {
