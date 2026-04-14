@@ -11,23 +11,32 @@ export async function GET() {
     process.env.SUPABASE_ANON_KEY!
   );
   try {
-   const results = await Promise.all([
-  "Jon Ossoff Georgia Senate",
-  "Mike Collins Georgia Senate",
-  "Georgia Senate race 2026",
-  "Georgia politics Ossoff",
-  "Georgia Medicaid healthcare Ossoff",
-  "Georgia jobs infrastructure Ossoff",
-  "Collins inflation Georgia",
-  "Georgia voting rights 2026",
-  "Georgia Senate primary Republican",
-  "Ossoff Collins poll Georgia",
-].map(q =>
-  fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
-    .then(r => r.json()).then(d => d.articles || []).catch(() => [])
-));
+const [newsApiResults, guardianResults] = await Promise.all([
+  // NewsAPI
+  Promise.all([
+    "Jon Ossoff Georgia Senate",
+    "Mike Collins Georgia Senate",
+    "Georgia Senate race 2026",
+    "Georgia politics Ossoff",
+    "Collins inflation Georgia",
+  ].map(q =>
+    fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=10&apiKey=${process.env.NEWS_API_KEY}`, { cache: "no-store" })
+      .then(r => r.json()).then(d => (d.articles || []).map((a: any) => ({ title: a.title, source: a.source?.name, url: a.url, publishedAt: a.publishedAt }))).catch(() => [])
+  )),
+  // Guardian API
+  Promise.all([
+    "Jon Ossoff",
+    "Georgia Senate 2026",
+    "Mike Collins Georgia",
+    "Georgia politics",
+    "Georgia Medicaid",
+  ].map(q =>
+    fetch(`https://content.guardianapis.com/search?q=${encodeURIComponent(q)}&api-key=${process.env.GUARDIAN_API_KEY}&page-size=20&show-fields=headline&order-by=newest`, { cache: "no-store" })
+      .then(r => r.json()).then(d => (d.response?.results || []).map((a: any) => ({ title: a.webTitle, source: "The Guardian", url: a.webUrl, publishedAt: a.webPublicationDate }))).catch(() => [])
+  )),
+]);
 
-    const all = results.flat();
+const all = [...newsApiResults.flat(), ...guardianResults.flat()];
     const unique = Array.from(new Map(all.map((a: any) => [a.url, {
       title: a.title,
       source: a.source?.name,
