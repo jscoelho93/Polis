@@ -630,21 +630,9 @@ function TalkingPointsScreen() {
   const generate=async()=>{
     setGenerating(true);
     const topNarr=topNegative||topPositive;
-    const platformContext=INIT_PLATFORM.slice(0,4).map((p:any)=>p.title+": "+p.summary.slice(0,120)).join("
-");
+    const platformContext=INIT_PLATFORM.slice(0,4).map((p:any)=>p.title+": "+p.summary.slice(0,120)).join(" | ");
     const narrativeContext=topNarr?"Top threat: "+topNarr.label+" (vol "+topNarr.vol+", vel +"+topNarr.vel+"). Detail: "+topNarr.detail:"";
-    const prompt="You are Polis, a political intelligence AI for Sen. Jon Ossoff (D-GA). Generate urgent talking points grounded in his real legislative record.
-
-Current situation:
-"+narrativeContext+"
-
-Ossoff legislative record (use as evidence):
-"+platformContext+"
-
-Ossoff approval: 47.8%, leading Collins by +8.6pts. Target: undecided suburban Georgia voters.
-
-Return ONLY valid JSON, no markdown:
-{"headline":"string","urgency":"critical|high|medium","threat":"string","points":[{"text":"string","src":"string","w":"high|medium|low","platformRef":"string"}],"ask":"string","tone":"string"}";
+    const prompt="You are Polis, a political intelligence AI for Sen. Jon Ossoff (D-GA). Generate urgent talking points grounded in his real legislative record. Current situation: "+narrativeContext+" Ossoff legislative record (use as evidence): "+platformContext+" Ossoff approval: 47.8%, leading Collins by +8.6pts. Target: undecided suburban Georgia voters. Return ONLY valid JSON, no markdown: {"headline":"string","urgency":"critical|high|medium","threat":"string","points":[{"text":"string","src":"string","w":"high|medium|low","platformRef":"string"}],"ask":"string","tone":"string"}";
     try{
       const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt}]})});
       const data=await res.json();
