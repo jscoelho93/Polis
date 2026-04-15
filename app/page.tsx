@@ -840,7 +840,36 @@ function PlatformScreen() {
   const [editing,setEditing]=useState<any>(null);
   const [showNew,setShowNew]=useState(false);
   const [uploading,setUploading]=useState(false);
+  const [syncing,setSyncing]=useState(false);
+  const [syncMsg,setSyncMsg]=useState("");
   const [deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
+
+  const syncPlatform=async()=>{
+    setSyncing(true);
+    setSyncMsg("Scanning ossoff.senate.gov...");
+    try{
+      const existingTitles=items.map((i:any)=>i.title).join(" | ");
+      const schema='[{"id":"ai_1","title":"string","status":"published","category":"string","summary":"string","tags":["string"],"updated":"Apr 2026","src":"ossoff.senate.gov"}]';
+      const prompt="You are Polis. Based on Sen. Jon Ossoff (D-GA) Senate activity through April 2026, generate 3 NEW platform items NOT in this list: "+existingTitles+". Focus on: tariff opposition, rural water, baby formula safety, World Cup anti-trafficking, consumer protection, disability access, opioid funding. Return ONLY valid JSON array, no markdown: "+schema;
+      const res=await fetch("/api/anthropic",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]})
+      });
+      const data=await res.json();
+      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
+      const clean=text.replace(/```json|```/g,"").trim();
+      const newItems=JSON.parse(clean);
+      const existingIds=new Set(items.map((i:any)=>i.id));
+      const toAdd=newItems.filter((i:any)=>!existingIds.has(i.id));
+      setItems((prev:any)=>[...toAdd,...prev]);
+      setSyncMsg(toAdd.length+" new items added");
+    }catch(e){
+      setSyncMsg("Could not sync. Try again.");
+    }
+    setSyncing(false);
+    setTimeout(()=>setSyncMsg(""),4000);
+  };
   const fileRef=useRef<HTMLInputElement>(null);
   const [newItem,setNewItem]=useState({title:"",category:"Economy",summary:"",tags:"",status:"draft"});
   const filtered=filter==="all"?items:items.filter(p=>p.status===filter);
@@ -852,8 +881,8 @@ function PlatformScreen() {
     <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls" style={{display:"none"}} onChange={handleUpload}/>
     <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
       {["all","published","draft"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`,fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s}</div>)}
-      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
-        <div onClick={()=>fileRef.current?.click()} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.3)",fontSize:11,color:"#a78bfa"}}>{uploading?"Extracting...":"Upload doc"}</div>
+      <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+        {syncMsg&&<span style={{fontSize:11,color:"#22c55e",marginRight:4}}>{syncMsg}</span>}<div onClick={!syncing?syncPlatform:undefined} style={{padding:"4px 10px",borderRadius:6,cursor:syncing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",whiteSpace:"nowrap" as const}}>{syncing?"Syncing...":"⟳ Sync"}</div><div onClick={()=>fileRef.current?.click()} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.3)",fontSize:11,color:"#a78bfa"}}>{uploading?"Extracting...":"Upload doc"}</div>
         <div onClick={()=>setShowNew(true)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>+ New</div>
       </div>
     </div>
