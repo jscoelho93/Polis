@@ -637,19 +637,54 @@ function PlatformScreen() {
   const [editing,setEditing]=useState<any>(null);
   const [showNew,setShowNew]=useState(false);
   const [uploading,setUploading]=useState(false);
+  const [syncing,setSyncing]=useState(false);
+  const [syncMsg,setSyncMsg]=useState("");
   const [deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
   const fileRef=useRef<HTMLInputElement>(null);
   const [newItem,setNewItem]=useState({title:"",category:"Economy",summary:"",tags:"",status:"draft"});
   const filtered=filter==="all"?items:items.filter(p=>p.status===filter);
-  const saveEdit=()=>{setItems(prev=>prev.map(p=>p.id===editing.id?editing:p));setEditing(null);setSel(null);};
-  const deleteItem=(id:string)=>{setItems(prev=>prev.filter(p=>p.id!==id));setDeleteConfirm(null);setSel(null);};
-  const addItem=()=>{const item={...newItem,id:`pl${Date.now()}`,tags:newItem.tags.split(",").map((t:string)=>t.trim()).filter(Boolean),updated:"Apr 2026"};setItems(prev=>[item,...prev]);setShowNew(false);setNewItem({title:"",category:"Economy",summary:"",tags:"",status:"draft"});};
-  const handleUpload=async(e:any)=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await extractFromFile(file,"platform");const item={...result,id:`pl${Date.now()}`,tags:result.tags||[],updated:"Apr 2026"};setItems(prev=>[item,...prev]);}catch(err){alert("Could not extract content.");}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+
+  const syncPlatform=async()=>{
+    setSyncing(true);
+    setSyncMsg("Scanning ossoff.senate.gov...");
+    try{
+      const existingTitles=items.map((i:any)=>i.title).join("\n");
+      const res=await fetch("/api/anthropic",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:2000,
+          messages:[{role:"user",content:"You are Polis. Based on Sen. Jon Ossoff (D-GA) recent Senate activity through April 2026, generate 3 NEW platform items NOT in this list:\n\n"+existingTitles+"\n\nFocus on recent activity: tariff opposition, rural water, baby formula safety, World Cup anti-trafficking, consumer protection, disability access.\n\nReturn ONLY valid JSON array, no markdown:\n[{\"id\":\"ai_1\",\"title\":\"string\",\"status\":\"published\",\"category\":\"string\",\"summary\":\"string\",\"tags\":[\"string\"],\"updated\":\"Apr 2026\",\"src\":\"ossoff.senate.gov\"}]"}]
+        })
+      });
+      const data=await res.json();
+      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
+      const clean=text.replace(/```json|```/g,"").trim();
+      const newItems=JSON.parse(clean);
+      const existingIds=new Set(items.map((i:any)=>i.id));
+      const toAdd=newItems.filter((i:any)=>!existingIds.has(i.id));
+      setItems((prev:any)=>[...toAdd,...prev]);
+      setSyncMsg(toAdd.length+" new items added");
+    }catch(e){
+      setSyncMsg("Could not sync. Try again.");
+    }
+    setSyncing(false);
+    setTimeout(()=>setSyncMsg(""),4000);
+  };
+
+  const saveEdit=()=>{setItems(prev=>prev.map((p:any)=>p.id===editing.id?editing:p));setEditing(null);setSel(null);};
+  const deleteItem=(id:string)=>{setItems(prev=>prev.filter((p:any)=>p.id!==id));setDeleteConfirm(null);setSel(null);};
+  const addItem=()=>{const item={...newItem,id:"pl"+Date.now(),tags:newItem.tags.split(",").map((t:string)=>t.trim()).filter(Boolean),updated:"Apr 9, 2026"};setItems((prev:any)=>[item,...prev]);setShowNew(false);setNewItem({title:"",category:"Economy",summary:"",tags:"",status:"draft"});};
+  const handleUpload=async(e:any)=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await extractFromFile(file,"platform");const item={...result,id:"pl"+Date.now(),tags:result.tags||[],updated:"Apr 9, 2026"};setItems((prev:any)=>[item,...prev]);}catch(err){alert("Could not extract content.");}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+
   return <div style={{maxWidth:720}}>
     <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls" style={{display:"none"}} onChange={handleUpload}/>
     <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-      {["all","published","draft"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`,fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s}</div>)}
-      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+      {["all","published","draft","idea"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:"1px solid "+(filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"),fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s}</div>)}
+      <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+        {syncMsg&&<span style={{fontSize:11,color:"#22c55e"}}>{syncMsg}</span>}
+        <div onClick={!syncing?syncPlatform:undefined} style={{padding:"4px 10px",borderRadius:6,cursor:syncing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>{syncing?"Syncing...":"⟳ Sync from ossoff.senate.gov"}</div>
         <div onClick={()=>fileRef.current?.click()} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.3)",fontSize:11,color:"#a78bfa"}}>{uploading?"Extracting...":"Upload doc"}</div>
         <div onClick={()=>setShowNew(true)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>+ New</div>
       </div>
@@ -661,22 +696,22 @@ function PlatformScreen() {
         <FieldInput value={newItem.category} onChange={(v:string)=>setNewItem(p=>({...p,category:v}))} placeholder="Category"/>
         <FieldTextArea value={newItem.summary} onChange={(v:string)=>setNewItem(p=>({...p,summary:v}))} placeholder="Summary"/>
         <FieldInput value={newItem.tags} onChange={(v:string)=>setNewItem(p=>({...p,tags:v}))} placeholder="Tags (comma separated)"/>
-        <FieldSelect value={newItem.status} onChange={(v:string)=>setNewItem(p=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+        <FieldSelect value={newItem.status} onChange={(v:string)=>setNewItem(p=>({...p,status:v}))}><option value="idea">Idea</option><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
         <div style={{display:"flex",gap:8}}>
           <div onClick={addItem} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
           <div onClick={()=>setShowNew(false)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
         </div>
       </div>
     </Card>}
-    {filtered.map(item=>(
-      <Card key={item.id} style={{marginBottom:8,borderLeft:`3px solid ${STATUS_COLOR[item.status]||"#475569"}`}}>
+    {filtered.map((item:any)=>(
+      <Card key={item.id} style={{marginBottom:8,borderLeft:"3px solid "+(STATUS_COLOR[item.status]||"#475569")}}>
         {editing?.id===item.id?(
           <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
             <FieldInput value={editing.title} onChange={(v:string)=>setEditing((p:any)=>({...p,title:v}))} placeholder="Title"/>
             <FieldInput value={editing.category} onChange={(v:string)=>setEditing((p:any)=>({...p,category:v}))} placeholder="Category"/>
             <FieldTextArea value={editing.summary} onChange={(v:string)=>setEditing((p:any)=>({...p,summary:v}))} placeholder="Summary"/>
             <FieldInput value={Array.isArray(editing.tags)?editing.tags.join(", "):editing.tags} onChange={(v:string)=>setEditing((p:any)=>({...p,tags:v.split(",").map((t:string)=>t.trim())}))} placeholder="Tags"/>
-            <FieldSelect value={editing.status} onChange={(v:string)=>setEditing((p:any)=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+            <FieldSelect value={editing.status} onChange={(v:string)=>setEditing((p:any)=>({...p,status:v}))}><option value="idea">Idea</option><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
             <div style={{display:"flex",gap:8}}>
               <div onClick={saveEdit} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
               <div onClick={()=>setEditing(null)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
@@ -685,13 +720,13 @@ function PlatformScreen() {
         ):(
           <div onClick={()=>setSel(sel===item.id?null:item.id)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-              <div><div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{item.title}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{item.category} · {(item as any).updated}</div></div>
-              <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={`${STATUS_COLOR[item.status]}18`}/>
+              <div><div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{item.title}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{item.category} · {item.updated}</div></div>
+              <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={(STATUS_COLOR[item.status]||"#475569")+"18"}/>
             </div>
             <div style={{fontSize:12,color:"#94a3b8"}}>{item.summary}</div>
             <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
-              {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>#{t}</span>)}
-              {(item as any).src&&<span style={{marginLeft:"auto",fontSize:10,color:"#334155"}}>📎 {(item as any).src}</span>}
+              {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>{"#"+t}</span>)}
+              {item.src&&<span style={{marginLeft:"auto",fontSize:10,color:"#334155"}}>{"📎 "+item.src}</span>}
             </div>
           </div>
         )}
