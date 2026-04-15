@@ -709,7 +709,7 @@ function PlatformScreen() {
       </Card>
     ))}
   </div>;
-}]`;
+};
 
       const res=await fetch("/api/anthropic",{
         method:"POST",
