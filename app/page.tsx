@@ -944,18 +944,66 @@ function PlatformScreen() {
 }
 
 function ExternalContextScreen() {
-  const trendColors: Record<string,string>={up:"#22c55e",down:"#ef4444",flat:"#94a3b8"};
-  const trends: Record<string,string>={up:"▲",down:"▼",flat:"→"};
+  const [metrics,setMetrics]=useState(EXT_CONTEXT);
+  const [refreshing,setRefreshing]=useState(false);
+  const [refreshedAt,setRefreshedAt]=useState<string|null>(null);
+  const [error,setError]=useState<string|null>(null);
+
+  const refresh=async()=>{
+    setRefreshing(true);
+    setError(null);
+    const schema='[{"id":"string","label":"string","val":"string","change":"string","trend":"up|down|flat","period":"string","src":"string","note":"string"}]';
+    const currentIds=metrics.map((m:any)=>m.id).join(",");
+    const prompt="You are Polis. Provide current Georgia economic and political context metrics as of April 2026. Return updated values for these metrics: Georgia Unemployment Rate, Georgia GDP Growth, GA Healthcare Uninsured Rate, Atlanta Metro Median Income, Rural GA Poverty Rate, GA Inflation Rate CPI, Savannah Port Container Volume, GA College Attainment Rate. For each metric provide the most current value you know, the change from prior period, trend direction, period, source, and a one-sentence campaign note for the Ossoff 2026 Senate race. Return ONLY valid JSON array with these exact ids: "+currentIds+". Schema: "+schema;
+    try{
+      const res=await fetch("/api/anthropic",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]})
+      });
+      const data=await res.json();
+      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
+      const clean=text.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean);
+      if(Array.isArray(parsed)&&parsed.length>0){
+        setMetrics(parsed);
+        setRefreshedAt(new Date().toLocaleTimeString());
+      }
+    }catch(e){
+      setError("Could not refresh. Showing cached data.");
+    }
+    setRefreshing(false);
+  };
+
+  const trendColors:Record<string,string>={up:"#22c55e",down:"#ef4444",flat:"#94a3b8"};
+  const trends:Record<string,string>={up:"▲",down:"▼",flat:"→"};
+
   return <div style={{maxWidth:720}}>
-    <div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#94a3b8"}}>Key economic and social metrics for Georgia. Updated monthly.</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,gap:12,flexWrap:"wrap" as const}}>
+      <div style={{fontSize:11,color:"#64748b"}}>
+        {refreshedAt?"Refreshed via Polis AI · "+refreshedAt:"Seed data · not yet refreshed"}
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        {error&&<span style={{fontSize:11,color:"#f97316"}}>{error}</span>}
+        <div onClick={!refreshing?refresh:undefined} style={{padding:"5px 12px",borderRadius:6,cursor:refreshing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600,whiteSpace:"nowrap" as const}}>
+          {refreshing?"Refreshing...":"⟳ Refresh data"}
+        </div>
+      </div>
+    </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
-      {EXT_CONTEXT.map((m,i)=>(
-        <Card key={i} style={{borderTop:`2px solid ${trendColors[m.trend]}`}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{fontSize:11,color:"#64748b",flex:1,paddingRight:8}}>{m.label}</div><div style={{fontSize:10,color:"#475569"}}>{m.period}</div></div>
-          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}><div style={{fontSize:20,fontWeight:800,color:"#f1f5f9"}}>{m.val}</div><div style={{fontSize:11,fontWeight:600,color:trendColors[m.trend]}}>{trends[m.trend]} {m.change}</div></div>
+      {metrics.map((m:any,i:number)=>(
+        <div key={m.id||i} style={{background:"rgba(15,23,42,0.7)",border:"1px solid rgba(51,65,85,0.5)",borderRadius:10,padding:16,borderTop:"2px solid "+(trendColors[m.trend]||"#94a3b8")}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+            <div style={{fontSize:11,color:"#64748b",flex:1,paddingRight:8}}>{m.label}</div>
+            <div style={{fontSize:10,color:"#475569"}}>{m.period}</div>
+          </div>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
+            <div style={{fontSize:20,fontWeight:800,color:"#f1f5f9"}}>{m.val}</div>
+            <div style={{fontSize:11,fontWeight:600,color:trendColors[m.trend]||"#94a3b8"}}>{(trends[m.trend]||"→")+" "+m.change}</div>
+          </div>
           <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{m.src}</div>
           <div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>{m.note}</div>
-        </Card>
+        </div>
       ))}
     </div>
   </div>;
