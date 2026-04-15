@@ -73,201 +73,19 @@ const TALKING_POINTS = [
   {id:"t3",issue:"Inflation counter-narrative",audience:"Rapid response opposition",date:"Apr 4, 2026",narrative:"n3",poll:null,headline:"Collins is running $2.4M in ads. Here is his actual record on Georgia economy.",points:[{text:"Collins voted against the bipartisan infrastructure bill — the same bill bringing 12,000 jobs to Savannah right now.",src:"Roll call + USDOT grant records, Mar 2026",w:"high"},{text:"Collins voted against the CHIPS Act which brought two semiconductor facilities to Georgia worth $4.5B.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high"}],ask:"Do not repeat his attack line. Lead with his voting record on Georgia-specific economic bills.",tone:"Assertive, factual, Georgia-specific. Never defensive."},
 ];
 
-// ─── REAL OSSOFF PLATFORM DATA — sourced from ossoff.senate.gov, GovTrack, Congress.gov ───
-
 const INIT_PLATFORM = [
-  {
-    id:"pl1",
-    title:"Savannah Port Infrastructure & Georgia Jobs",
-    status:"published",
-    category:"Economy",
-    summary:"Secured federal infrastructure funding for Savannah port expansion projecting 12,000+ direct and indirect jobs. Part of bipartisan infrastructure law delivering $1.8B+ in surface transportation upgrades to Georgia in 2024 alone — upgrading ports, airports, roads, and bridges statewide.",
-    tags:["jobs","infrastructure","ports","savannah"],
-    updated:"Mar 2026",
-    source:"ossoff.senate.gov / Four-Year Report",
-    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl2",
-    title:"Housing Affordability: Crack Down on Corporate Home Buyers",
-    status:"published",
-    category:"Housing",
-    summary:"Championed Senate-passed legislation cracking down on out-of-state corporations buying up single-family homes in Georgia. Led investigation revealing 30% of single-family rentals in metro Atlanta — and nearly 70% in Henry County — are now owned by large corporations. Senate passed the bill March 2026.",
-    tags:["housing","affordability","corporations","atlanta"],
-    updated:"Mar 2026",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/senate-passes-bill-championed-by-sen-ossoff-to-crack-down-on-out-of-state-companies-buying-single-family-homes/",
-    billStatus:"passed_senate"
-  },
-  {
-    id:"pl3",
-    title:"HELPER Act: Homeownership for First Responders & Teachers",
-    status:"published",
-    category:"Housing",
-    summary:"Introduced the bipartisan HELPER Act (Homes for Every Local Protector, Educator, and Responder) with Sen. Ashley Moody (R-FL) to create a new FHA home loan program eliminating upfront costs and monthly mortgage insurance premiums for law enforcement, firefighters, medical first responders, and teachers.",
-    tags:["housing","first-responders","teachers","bipartisan"],
-    updated:"Mar 2025",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/sens-ossoff-moody-introduce-bipartisan-bill-to-make-homeownership-more-affordable-for-first-responders-teachers/",
-    billStatus:"introduced"
-  },
-  {
-    id:"pl4",
-    title:"Medicaid Expansion & Healthcare Access for 500,000 Georgians",
-    status:"published",
-    category:"Healthcare",
-    summary:"Champion for full ACA Medicaid expansion in Georgia. Ossoff has consistently contrasted with Collins, who voted against Medicaid expansion twice. Georgia has the second-highest uninsured rate in the nation with 500,000+ residents in the coverage gap. Signed bipartisan bill to lower drug costs for Georgians into law.",
-    tags:["healthcare","medicaid","uninsured","rural"],
-    updated:"Apr 2026",
-    source:"ossoff.senate.gov / KFF",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
-    billStatus:"ongoing"
-  },
-  {
-    id:"pl5",
-    title:"Bipartisan Drug Cost Reduction — Enacted",
-    status:"published",
-    category:"Healthcare",
-    summary:"Helped pass a bipartisan bill into law to lower drug costs for Georgians. Also secured passage of a bipartisan cancer screening bill for Georgia seniors — now law. Cosponsored the bipartisan Safe Step Act to prevent insurance companies from delaying needed medical care.",
-    tags:["healthcare","drug-costs","seniors","bipartisan"],
-    updated:"2025",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl6",
-    title:"Broadband Expansion: Rural Georgia Connectivity",
-    status:"published",
-    category:"Economy",
-    summary:"Delivering unprecedented expansion of broadband internet access across Georgia through the bipartisan infrastructure law — with particular focus on rural counties that have historically lacked reliable connectivity. Over $60M for lead pipe removal, plus broadband, water, and transit infrastructure statewide.",
-    tags:["broadband","rural","infrastructure","internet"],
-    updated:"2024",
-    source:"ossoff.senate.gov / Four-Year Report",
-    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl7",
-    title:"Chattahoochee River Act & Georgia Water Infrastructure",
-    status:"published",
-    category:"Environment",
-    summary:"Passed the Chattahoochee River Act into law (2022) and the Georgia Stormwater Management Act, expanding Army Corps of Engineers authority to upgrade drinking water, wastewater, and stormwater infrastructure across Atlanta, East Point, Henry, Clayton, Muscogee, Chatham, Camden, and other Georgia counties.",
-    tags:["water","environment","infrastructure","rivers"],
-    updated:"2022",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl8",
-    title:"Children Online Safety & Big Tech Accountability",
-    status:"published",
-    category:"Tech & Safety",
-    summary:"Passed laws to protect children online. In 2026, launched formal inquiries with Apple, Google, Meta, Amazon, and X over sexual exploitation of children on their platforms. Also introduced bipartisan Preventing Child Trafficking Act of 2025 with Sen. Grassley (R-IA), and pushing FIFA on anti-trafficking measures ahead of 2026 World Cup in Atlanta.",
-    tags:["children","online-safety","bigtech","trafficking"],
-    updated:"Apr 2026",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl9",
-    title:"Veterans Benefits & Military Family Support",
-    status:"published",
-    category:"Veterans",
-    summary:"Passed bipartisan legislation expanding veterans' access to mental health care and Access for Veterans to Records Act — clearing a backlog of 400,000+ records requests at the National Archives. Secured $31M+ to help veteran housing nonprofits across Georgia. Authored Rural Veterans Transportation to Care Act for rural VA access. Serving as Ranking Member, Senate Appropriations Subcommittee on Military Construction and Veterans Affairs.",
-    tags:["veterans","military","mental-health","rural"],
-    updated:"2025",
-    source:"ossoff.senate.gov / Four-Year Report",
-    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl10",
-    title:"Anti-Corruption: Federal Prison Reform & Oversight",
-    status:"published",
-    category:"Justice",
-    summary:"Led landmark bipartisan Senate investigations exposing corruption and abuse in federal prisons — including sexual assault of female inmates and medical mistreatment of women in federal detention. Passed the First Step Implementation Act and legislation fighting corruption in U.S. prisons. Conducted oversight as Senate Judiciary Committee member.",
-    tags:["justice","prisons","oversight","anticorruption"],
-    updated:"2023",
-    source:"ossoff.senate.gov / About",
-    sourceUrl:"https://www.ossoff.senate.gov/about/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl11",
-    title:"Fentanyl & Opioid Crisis — Southern Border Security",
-    status:"published",
-    category:"Public Safety",
-    summary:"Passed legislation to tackle the opioid epidemic and prevent fentanyl trafficking across the Southern Border. Delivering federal resources specifically for Georgia families impacted by fentanyl. Working to protect Georgia communities from opioid harm through bipartisan enforcement mechanisms.",
-    tags:["fentanyl","opioids","publicsafety","border"],
-    updated:"2024",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl12",
-    title:"Ban Congressional Stock Trading Act",
-    status:"published",
-    category:"Ethics",
-    summary:"Introduced the Ban Congressional Stock Trading Act (S. 1879) to prohibit members of Congress and their spouses from trading individual stocks — ending conflicts of interest between legislators' financial portfolios and their official duties.",
-    tags:["ethics","stocktrading","congress","corruption"],
-    updated:"2025",
-    source:"GovTrack / ossoff.senate.gov",
-    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
-    billStatus:"introduced"
-  },
-  {
-    id:"pl13",
-    title:"Voting Rights & Election Access",
-    status:"published",
-    category:"Democracy",
-    summary:"Consistent champion for restoring Voting Rights Act protections, expanding early voting access, and automatic voter registration statewide. Ossoff's voting rights record is a central contrast with Collins in the 2026 race.",
-    tags:["democracy","voting","rights","elections"],
-    updated:"Mar 2026",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
-    billStatus:"ongoing"
-  },
-  {
-    id:"pl14",
-    title:"Disability Access: Think Differently Database Act — Enacted",
-    status:"published",
-    category:"Disability Rights",
-    summary:"Passed into law the bipartisan Think Differently Database Act (with Sen. Schmitt, R-MO) directing HHS to build a comprehensive resource website for Americans with disabilities. Supporting the Access Technology Affordability Act of 2025 to create a $2,000 tax credit for blind Georgians to afford Braille readers and specialized technology. Championing the ENABLE Act to extend tax benefits for people with disabilities.",
-    tags:["disability","accessibility","bipartisan","technology"],
-    updated:"Apr 2026",
-    source:"ossoff.senate.gov",
-    sourceUrl:"https://www.ossoff.senate.gov/press-releases/sen-ossoff-backing-bipartisan-legislation-to-help-blind-georgians/",
-    billStatus:"enacted"
-  },
-  {
-    id:"pl15",
-    title:"Rural Georgia Economic Opportunity & Agricultural Support",
-    status:"draft",
-    category:"Economy",
-    summary:"Pursuing targeted rural investment including: bipartisan Rural Water Infrastructure upgrades, Rural Veterinary Workforce bill, Rural Veterans Transportation Act, and Land Grant Research Prioritization Act of 2026 (S. 4067). Working to expand federal opportunity zones for rural counties with above-average unemployment.",
-    tags:["rural","economy","agriculture","veterinary"],
-    updated:"Apr 2026",
-    source:"GovTrack / ossoff.senate.gov",
-    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
-    billStatus:"introduced"
-  },
-  {
-    id:"pl16",
-    title:"Clean Energy & Georgia Manufacturing",
-    status:"draft",
-    category:"Environment",
-    summary:"Introduced American Energy Security Act of 2025 (S. 2713). Supporting transition to clean energy manufacturing with tax incentives for EV and solar production in Georgia. Georgia has benefited from CHIPS Act investments (semiconductor facilities worth $4.5B) that Ossoff supported and Collins voted against.",
-    tags:["climate","energy","manufacturing","chips"],
-    updated:"2025",
-    source:"GovTrack",
-    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
-    billStatus:"introduced"
-  },
+  {id:"pl1",title:"Healthcare Affordability and ACA Protection",status:"published",category:"Healthcare",summary:"Fighting to extend ACA tax credits that 1.4 million Georgians rely on — Republicans blocked his amendment twice. Launched investigation into rising health costs and hospital closures from Trump Medicaid cuts. St. Mary's Sacred Heart Hospital ended Labor & Delivery; Evans Memorial Hospital ICU at risk. Helped pass bipartisan bill to lower drug costs for Georgians (Mar 16, 2026) and bill to help children get faster medical care into law (Feb 26, 2026).",tags:["healthcare","ACA","medicaid","rural","drug costs"],updated:"Apr 14, 2026",src:"ossoff.senate.gov"},
+  {id:"pl2",title:"Georgia Ports and Infrastructure Investment",status:"published",category:"Economy",summary:"Delivered resources to upgrade Georgia Ports with Sen. Warnock (Mar 20, 2026). Through the bipartisan infrastructure law, delivering broadband expansion, port and airport upgrades, road and bridge investment statewide. Passed Georgia Stormwater Management Act into law — delivering upgrades in Columbus, Hampton, and across Georgia. Delivered water infrastructure upgrades across dozens of Georgia communities.",tags:["jobs","infrastructure","ports","broadband","water"],updated:"Apr 13, 2026",src:"ossoff.senate.gov"},
+  {id:"pl3",title:"Housing Affordability and Rent Relief",status:"published",category:"Economy",summary:"Working to help Georgians combat soaring rent costs (Apr 8, 2026). Passed bipartisan legislation to lower housing costs (Mar 13, 2026). Senate passed Ossoff-championed bill to crack down on out-of-state companies buying single-family homes in Georgia (Mar 17, 2026). Directed Federal watchdog to investigate unsafe conditions for Georgia renters. Delivering funds to build more affordable housing in Baldwin County.",tags:["housing","rent","affordability","homeownership"],updated:"Apr 8, 2026",src:"ossoff.senate.gov"},
+  {id:"pl4",title:"TSA Worker Pay and Government Accountability",status:"published",category:"Economy",summary:"Blocked Senate Republicans from defunding TSA 10 times in 3 weeks before securing a deal (Mar 27, 2026). Led effort to ensure TSA workers at Hartsfield-Jackson and airports across Georgia received pay. Blasted Republican obstruction as a threat to Georgia's economy and travel infrastructure. Named most bipartisan member of Congress (July 2025).",tags:["TSA","workers","pay","accountability","bipartisan"],updated:"Mar 27, 2026",src:"ossoff.senate.gov"},
+  {id:"pl5",title:"Child Safety and Protection",status:"published",category:"Public Safety",summary:"UNICEF USA honored Ossoff as 2025 Champion for Children. Bipartisan bill to stop child trafficking passed Senate (Dec 2025). Bipartisan investigation uncovered foster children being locked up due to lack of placements (Apr 2, 2026). Pressing Big Tech over sexual exploitation of children — launched inquiries with Apple, Google, Meta, Amazon, and X (Apr 1, 2026). Investigating toys tested for lead gaps.",tags:["children","trafficking","online safety","foster care","lead"],updated:"Apr 1, 2026",src:"ossoff.senate.gov"},
+  {id:"pl6",title:"Veterans and Military Families",status:"published",category:"Veterans",summary:"Backed bipartisan bill for disabled veterans (Apr 14, 2026). President Trump signed Ossoff-backed bill protecting veterans from foreclosure (Jul 30, 2025). Passed most funding for Georgia military construction in 15 years. Launched inquiries into VA childcare programs in Atlanta, Augusta, and Dublin. Blasted VA proposal to cut benefits for disabled veterans. Delivered Dobbins Air Reserve Base upgrades.",tags:["veterans","military","VA","housing","healthcare"],updated:"Apr 14, 2026",src:"ossoff.senate.gov"},
+  {id:"pl7",title:"ICE Detention and Constitutional Rights",status:"published",category:"Democracy",summary:"Backing bill requiring local approval before federal government opens ICE detention facilities, including Social Circle, GA (Apr 9, 2026). Investigating Alligator Alcatraz detention site for possible torture (Mar 26, 2026). Investigation uncovered 1,000+ credible reports of human rights abuses in immigration detention. Pressed DHS over deaths in ICE custody. Defended constitutional rights against warrantless raids.",tags:["ICE","civil rights","detention","constitution","immigration"],updated:"Apr 9, 2026",src:"ossoff.senate.gov"},
+  {id:"pl8",title:"Opioid Epidemic and Public Health",status:"published",category:"Healthcare",summary:"Strengthening resources to fight opioid epidemic across Georgia (Apr 14, 2026) — delivering Federal funding to expand naloxone supply. Delivered $900,000 to combat opioid crisis with Sen. Warnock. Defending CDC from defunding — successfully defeated effort to gut CDC budget. Sounded alarm on Trump Admin freezing CDC fentanyl overdose prevention program.",tags:["opioids","CDC","fentanyl","naloxone","public health"],updated:"Apr 14, 2026",src:"ossoff.senate.gov"},
+  {id:"pl9",title:"Small Business and Economic Development",status:"published",category:"Economy",summary:"Expanding small business opportunities across Georgia (Apr 13, 2026). Introduced Support Small Business Growth Act (S.3459). Introduced Skilled Workforce Act (S.2664) to upgrade technical colleges. Backing Buying American Cotton Act for Georgia cotton growers. Delivered apprenticeship funding. Urged Trump Admin to restore funding supporting Atlanta's Black-owned businesses. Supporting Georgia's rural small businesses and forestry industry.",tags:["small business","jobs","workforce","cotton","rural"],updated:"Apr 13, 2026",src:"ossoff.senate.gov"},
+  {id:"pl10",title:"Civil Rights Cold Cases and Criminal Justice",status:"published",category:"Justice",summary:"Bipartisan Civil Rights bill to solve cold cases passed U.S. Senate (Dec 2025). Passed Federal Prison Oversight Act into law. Led bipartisan investigation into civil rights in federal courts (Sep 2025). Delivered resources to strengthen violence prevention in Fulton County. Strengthened public safety across dozens of Georgia communities with new patrol vehicles, body cameras, and equipment.",tags:["civil rights","cold cases","prisons","justice","public safety"],updated:"Dec 17, 2025",src:"ossoff.senate.gov"},
+  {id:"pl11",title:"Clean Energy and Environment",status:"draft",category:"Environment",summary:"Introduced American Energy Security Act (S.2713) with Sen. Cassidy. Passed bipartisan amendment to encourage federal protection of the Okefenokee (Aug 2025). Working to protect Georgia's water infrastructure from cyberattacks. Introduced bipartisan precision agriculture technology bill with Sens. Moody, Warnock, and Scott for Georgia's land-grant universities.",tags:["energy","environment","okefenokee","agriculture","water"],updated:"Apr 3, 2026",src:"ossoff.senate.gov"},
+  {id:"pl12",title:"Mental Health and Substance Abuse",status:"published",category:"Healthcare",summary:"Expanding mental health resources for Hispanic families in metro Atlanta (Mar 5, 2026). Delivering mental health services in Forsyth County. Championing bipartisan 988 Lifeline Location Improvement Act. Strengthening mental health counseling for Georgia students in Sumter County. Passed Military Families Mental Health Services Act into law.",tags:["mental health","988","substance abuse","students","veterans"],updated:"Apr 3, 2026",src:"ossoff.senate.gov"},
 ];
 
 const EXT_CONTEXT = [
@@ -677,9 +495,54 @@ function SocialMediaScreen() {
 
 function NarrativesScreen() {
   const [sel,setSel]=useState<string|null>(null);
-  const displayed=NARRATIVES_SEED;
+  const [liveNarratives,setLiveNarratives]=useState<any[]|null>(null);
+  const [loading,setLoading]=useState(false);
+  const [fetchedAt,setFetchedAt]=useState<string|null>(null);
+  const [error,setError]=useState<string|null>(null);
+  const displayed=liveNarratives||NARRATIVES_SEED;
+
+  const fetchLive=async(force=false)=>{
+    const CK="polis_narratives",CT="polis_narratives_ts",TW=12*60*60*1000;
+    if(!force){
+      try{
+        const c=sessionStorage.getItem(CK),t=sessionStorage.getItem(CT);
+        if(c&&t&&Date.now()-parseInt(t)<TW){
+          const d=JSON.parse(c);
+          setLiveNarratives([...d.narratives].sort((a:any,b:any)=>b.vel-a.vel));
+          setFetchedAt(d.fetchedAt);
+          return;
+        }
+      }catch(e){}
+    }
+    setLoading(true);setError(null);
+    try{
+      const res=await fetch("/api/narratives");
+      const text=await res.text();
+      const data=JSON.parse(text);
+      if(data.error)throw new Error(data.error);
+      sessionStorage.setItem(CK,JSON.stringify(data));
+      sessionStorage.setItem(CT,Date.now().toString());
+      setLiveNarratives([...data.narratives].sort((a:any,b:any)=>b.vel-a.vel));
+      setFetchedAt(data.fetchedAt);
+    }catch(e:any){setError(e.message);}
+    setLoading(false);
+  };
+
   return <div style={{maxWidth:720}}>
-    <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>{NARRATIVES_SEED.length} narratives tracked · updated Apr 5, 2026</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+      <div style={{fontSize:11,color:"#64748b"}}>
+        {liveNarratives
+          ?`${liveNarratives.length} live narratives · fetched ${fetchedAt?new Date(fetchedAt).toLocaleTimeString():""}`
+          :`${NARRATIVES_SEED.length} seed narratives · not yet live`}
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <div onClick={()=>fetchLive(false)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600}}>
+          {loading?"Fetching...":"⟳ Fetch live narratives"}
+        </div>
+        {liveNarratives&&<div onClick={()=>fetchLive(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"transparent",border:"1px solid rgba(51,65,85,0.5)",fontSize:11,color:"#475569"}}>Force refresh</div>}
+      </div>
+    </div>
+    {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
     {displayed.map((n:any)=>(
       <Card key={n.id} style={{marginBottom:8,cursor:"pointer",border:`1px solid ${sel===n.id?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`}}>
         <div onClick={()=>setSel(sel===n.id?null:n.id)}>
@@ -705,6 +568,14 @@ function NarrativesScreen() {
               <div style={{flex:1}}><MiniBar val={s.share} max={100} color="#3b82f6" h={5}/></div>
               <div style={{fontSize:11,color:"#94a3b8",width:28,textAlign:"right"}}>{s.share}%</div>
               {s.reachFormatted&&<div style={{fontSize:10,color:"#475569",width:36}}>{s.reachFormatted}</div>}
+            </div>
+          ))}</>}
+          {n.articleUrls&&n.articleUrls.length>0&&<><Divider/><SL>Source articles</SL>
+          {n.articleUrls.map((url:string,i:number)=>(
+            <div key={i} style={{marginBottom:6}}>
+              <a href={url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#3b82f6",wordBreak:"break-all" as const,textDecoration:"none"}}>
+                → {url.replace(/https?:\/\/(www\.)?/,"").slice(0,80)}{url.length>80?"...":""}
+              </a>
             </div>
           ))}</>}
         </div>}
@@ -759,54 +630,85 @@ function TalkingPointsScreen() {
   </div>;
 }
 
-// ─── PLATFORM SCREEN (real data) ──────────────────────────────────────────────
-
 function PlatformScreen() {
   const [items,setItems]=useState(INIT_PLATFORM);
   const [sel,setSel]=useState<string|null>(null);
   const [filter,setFilter]=useState("all");
-  const [catFilter,setCatFilter]=useState("all");
   const [editing,setEditing]=useState<any>(null);
   const [showNew,setShowNew]=useState(false);
   const [uploading,setUploading]=useState(false);
   const [deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
-  const [refreshing,setRefreshing]=useState(false);
-  const [refreshLog,setRefreshLog]=useState<string[]>([]);
-  const [lastRefreshed,setLastRefreshed]=useState<string|null>(null);
   const fileRef=useRef<HTMLInputElement>(null);
   const [newItem,setNewItem]=useState({title:"",category:"Economy",summary:"",tags:"",status:"draft"});
-
-  const refreshFromSenateGov=async()=>{
-    setRefreshing(true);
-    setRefreshLog(["Connecting to ossoff.senate.gov..."]);
-    try{
-      // Step 1: fetch recent press releases summary
-      await new Promise(r=>setTimeout(r,600));
-      setRefreshLog(p=>[...p,"Scanning recent press releases (Apr 2026)..."]);
-      await new Promise(r=>setTimeout(r,700));
-      setRefreshLog(p=>[...p,"Extracting legislative actions and bill statuses..."]);
-
-      const prompt=`You are Polis, an AI assistant for Sen. Jon Ossoff's (D-GA) 2026 Senate campaign.
-
-Based on what you know about Ossoff's recent Senate activity from ossoff.senate.gov (press releases through April 2026), generate 3-5 NEW platform items that are NOT already in this list:
-
-EXISTING TITLES (do not duplicate):
-${items.map(i=>i.title).join("\n")}
-
-Focus on his most recent activity: housing legislation, disability rights, rural infrastructure, consumer protection, anti-tariff statements, World Cup anti-trafficking work, agricultural bills, any new bipartisan bills introduced in 2026.
-
-Return ONLY valid JSON array — no markdown, no preamble:
-[{
-  "id": "ai_[short_slug]",
-  "title": "string",
-  "status": "published",
-  "category": "Economy|Housing|Healthcare|Veterans|Justice|Democracy|Environment|Tech & Safety|Disability Rights|Public Safety|Ethics|Agriculture",
-  "summary": "2-3 sentence summary of what he did or is doing. Be specific — name the bill, the partner senator, the Georgia impact.",
-  "tags": ["string","string"],
-  "updated": "Apr 2026",
-  "source": "ossoff.senate.gov",
-  "sourceUrl": "https://www.ossoff.senate.gov/press-releases/",
-  "billStatus": "enacted|passed_senate|introduced|ongoing"
+  const filtered=filter==="all"?items:items.filter(p=>p.status===filter);
+  const saveEdit=()=>{setItems(prev=>prev.map(p=>p.id===editing.id?editing:p));setEditing(null);setSel(null);};
+  const deleteItem=(id:string)=>{setItems(prev=>prev.filter(p=>p.id!==id));setDeleteConfirm(null);setSel(null);};
+  const addItem=()=>{const item={...newItem,id:`pl${Date.now()}`,tags:newItem.tags.split(",").map((t:string)=>t.trim()).filter(Boolean),updated:"Apr 2026"};setItems(prev=>[item,...prev]);setShowNew(false);setNewItem({title:"",category:"Economy",summary:"",tags:"",status:"draft"});};
+  const handleUpload=async(e:any)=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await extractFromFile(file,"platform");const item={...result,id:`pl${Date.now()}`,tags:result.tags||[],updated:"Apr 2026"};setItems(prev=>[item,...prev]);}catch(err){alert("Could not extract content.");}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+  return <div style={{maxWidth:720}}>
+    <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls" style={{display:"none"}} onChange={handleUpload}/>
+    <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+      {["all","published","draft"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`,fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s}</div>)}
+      <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+        <div onClick={()=>fileRef.current?.click()} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.3)",fontSize:11,color:"#a78bfa"}}>{uploading?"Extracting...":"Upload doc"}</div>
+        <div onClick={()=>setShowNew(true)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>+ New</div>
+      </div>
+    </div>
+    {showNew&&<Card style={{marginBottom:12,border:"1px solid rgba(34,197,94,0.3)"}}>
+      <SL>New platform item</SL>
+      <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+        <FieldInput value={newItem.title} onChange={(v:string)=>setNewItem(p=>({...p,title:v}))} placeholder="Title"/>
+        <FieldInput value={newItem.category} onChange={(v:string)=>setNewItem(p=>({...p,category:v}))} placeholder="Category"/>
+        <FieldTextArea value={newItem.summary} onChange={(v:string)=>setNewItem(p=>({...p,summary:v}))} placeholder="Summary"/>
+        <FieldInput value={newItem.tags} onChange={(v:string)=>setNewItem(p=>({...p,tags:v}))} placeholder="Tags (comma separated)"/>
+        <FieldSelect value={newItem.status} onChange={(v:string)=>setNewItem(p=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+        <div style={{display:"flex",gap:8}}>
+          <div onClick={addItem} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
+          <div onClick={()=>setShowNew(false)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
+        </div>
+      </div>
+    </Card>}
+    {filtered.map(item=>(
+      <Card key={item.id} style={{marginBottom:8,borderLeft:`3px solid ${STATUS_COLOR[item.status]||"#475569"}`}}>
+        {editing?.id===item.id?(
+          <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
+            <FieldInput value={editing.title} onChange={(v:string)=>setEditing((p:any)=>({...p,title:v}))} placeholder="Title"/>
+            <FieldInput value={editing.category} onChange={(v:string)=>setEditing((p:any)=>({...p,category:v}))} placeholder="Category"/>
+            <FieldTextArea value={editing.summary} onChange={(v:string)=>setEditing((p:any)=>({...p,summary:v}))} placeholder="Summary"/>
+            <FieldInput value={Array.isArray(editing.tags)?editing.tags.join(", "):editing.tags} onChange={(v:string)=>setEditing((p:any)=>({...p,tags:v.split(",").map((t:string)=>t.trim())}))} placeholder="Tags"/>
+            <FieldSelect value={editing.status} onChange={(v:string)=>setEditing((p:any)=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+            <div style={{display:"flex",gap:8}}>
+              <div onClick={saveEdit} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
+              <div onClick={()=>setEditing(null)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
+            </div>
+          </div>
+        ):(
+          <div onClick={()=>setSel(sel===item.id?null:item.id)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+              <div><div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{item.title}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{item.category} · {(item as any).updated}</div></div>
+              <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={`${STATUS_COLOR[item.status]}18`}/>
+            </div>
+            <div style={{fontSize:12,color:"#94a3b8"}}>{item.summary}</div>
+            <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+              {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>#{t}</span>)}
+              {(item as any).src&&<span style={{marginLeft:"auto",fontSize:10,color:"#334155"}}>📎 {(item as any).src}</span>}
+            </div>
+          </div>
+        )}
+        {sel===item.id&&!editing&&<div><Divider/>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <div onClick={()=>setEditing({...item})} style={{padding:"5px 10px",borderRadius:5,background:"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.3)",fontSize:11,color:"#3b82f6",cursor:"pointer"}}>Edit</div>
+            {deleteConfirm===item.id?(
+              <><div onClick={()=>deleteItem(item.id)} style={{padding:"5px 10px",borderRadius:5,background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.4)",fontSize:11,color:"#ef4444",cursor:"pointer"}}>Confirm delete</div>
+              <div onClick={()=>setDeleteConfirm(null)} style={{padding:"5px 10px",borderRadius:5,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:11,color:"#64748b",cursor:"pointer"}}>Cancel</div></>
+            ):(
+              <div onClick={()=>setDeleteConfirm(item.id)} style={{padding:"5px 10px",borderRadius:5,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",fontSize:11,color:"#ef4444",cursor:"pointer"}}>Delete</div>
+            )}
+          </div>
+        </div>}
+      </Card>
+    ))}
+  </div>;
 }]`;
 
       const res=await fetch("/api/anthropic",{
