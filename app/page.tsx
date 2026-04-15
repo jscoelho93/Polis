@@ -368,7 +368,7 @@ async function extractFromFile(file: File, type: "platform"|"contact"): Promise<
   const prompt = type === "platform"
     ? `Extract policy platform information from this document and return ONLY valid JSON: {"title":"string","category":"Economy|Healthcare|Environment|Education|Democracy|Other","summary":"string","tags":["string"],"status":"draft"}. Document: ${content.slice(0,3000)}`
     : `Extract contact information from this document. Could be a business card, email signature, contact list, or CSV/Excel file. Return ONLY valid JSON array: [{"name":"string","role":"string","org":"string","type":"team|donor|community|ally","phone":"string","email":"string","note":"string","priority":"primary|high|medium"}]. Document: ${content.slice(0,3000)}`;
-  const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+  const res = await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
   const data = await res.json();
   const text = data.content?.map((c:any)=>c.text||"").join("")||"";
   return JSON.parse(text.replace(/```json|```/g,"").trim());
@@ -723,7 +723,7 @@ function TalkingPointsScreen() {
   const generate=async()=>{
     setGenerating(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`You are Polis. Generate talking points for Jon Ossoff (D-GA, 47.8% approval, leading Collins) targeting undecided suburban Georgia voter in 2026. Context: Savannah port +12,000 jobs, Collins inflation ads running. Return ONLY valid JSON: {"headline":"string","points":[{"text":"string","src":"string","w":"high|medium|low"}],"ask":"string","tone":"string"} 3 points max.`}]})});
+      const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`You are Polis. Generate talking points for Jon Ossoff (D-GA, 47.8% approval, leading Collins) targeting undecided suburban Georgia voter in 2026. Context: Savannah port +12,000 jobs, Collins inflation ads running. Return ONLY valid JSON: {"headline":"string","points":[{"text":"string","src":"string","w":"high|medium|low"}],"ask":"string","tone":"string"} 3 points max.`}]})});
       const data=await res.json();
       const text=data.content?.map((i:any)=>i.text||"").join("")||"";
       setAiResult(JSON.parse(text.replace(/```json|```/g,"").trim()));
@@ -809,7 +809,7 @@ Return ONLY valid JSON array — no markdown, no preamble:
   "billStatus": "enacted|passed_senate|introduced|ongoing"
 }]`;
 
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch("/api/anthropic",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
@@ -994,7 +994,7 @@ function CalendarScreen() {
   const URG: Record<string,string>={critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#22c55e"};
   const genBrief=async(ev:any)=>{
     setGenerating(ev.id);
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`You are Polis. Generate a prep brief for Jon Ossoff (D-GA, 47.8% approval, +3.7 net vs Collins 39.2%) for: "${ev.title}" on ${ev.date}. Top narratives: Savannah port jobs (positive), Collins inflation ads (negative). Return ONLY valid JSON: {"context":"string","attacks":["string","string"],"message":"string","ask":"string","basedOn":"string"}`}]})});
+    try{const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`You are Polis. Generate a prep brief for Jon Ossoff (D-GA, 47.8% approval, +3.7 net vs Collins 39.2%) for: "${ev.title}" on ${ev.date}. Top narratives: Savannah port jobs (positive), Collins inflation ads (negative). Return ONLY valid JSON: {"context":"string","attacks":["string","string"],"message":"string","ask":"string","basedOn":"string"}`}]})});
       const data=await res.json();const text=data.content?.map((i:any)=>i.text||"").join("")||"";
       setGeneratedBriefs((p:any)=>({...p,[ev.id]:JSON.parse(text.replace(/```json|```/g,"").trim())}));}
     catch(e){setGeneratedBriefs((p:any)=>({...p,[ev.id]:{context:"Ossoff enters at +3.7 net.",attacks:["Inflation pivot to jobs"],message:"Georgia jobs first.",ask:"Set economic frame early.",basedOn:"AJC poll Apr 1"}}));}
@@ -1181,7 +1181,7 @@ function AgentsScreen() {
   const generateRolodexEmail=async()=>{
     setGeneratingEmail(true);
     const recipients=INIT_CONTACTS.filter(c=>c.type===rolodexFilter);
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`You are Polis, a political AI for Sen. Jon Ossoff (D-GA) 2026 campaign. Write a campaign email based on this prompt: "${rolodexPrompt}". Recipients: ${recipients.map(c=>c.name).join(", ")} (${rolodexFilter}s). Context: Ossoff approval 47.8%, leading Collins +8.6pts, Savannah port jobs announcement. Return ONLY valid JSON: {"subject":"string","body":"string"}`}]})});
+    try{const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`You are Polis, a political AI for Sen. Jon Ossoff (D-GA) 2026 campaign. Write a campaign email based on this prompt: "${rolodexPrompt}". Recipients: ${recipients.map(c=>c.name).join(", ")} (${rolodexFilter}s). Context: Ossoff approval 47.8%, leading Collins +8.6pts, Savannah port jobs announcement. Return ONLY valid JSON: {"subject":"string","body":"string"}`}]})});
       const data=await res.json();const text=data.content?.map((i:any)=>i.text||"").join("")||"";
       setGeneratedEmail(JSON.parse(text.replace(/```json|```/g,"").trim()));}
     catch(e){setGeneratedEmail({subject:"An Important Update from the Ossoff Campaign",body:`Dear Friend,\n\nThank you for your continued support.\n\n${rolodexPrompt}\n\nTogether, we are building a better Georgia.\n\nWarm regards,\nThe Ossoff for Senate Team`});}
@@ -1190,7 +1190,7 @@ function AgentsScreen() {
 
   const runResearch=async()=>{
     setResearching(true);setResearchResult(null);setSavedResearch(false);
-    try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,messages:[{role:"user",content:`You are Polis, a political research AI for Sen. Jon Ossoff (D-GA) 2026 campaign. Conduct thorough research on: "${researchPrompt}". Return ONLY valid JSON: {"title":"string","summary":"string","keyFindings":["string","string","string"],"campaignRelevance":"string","sources":["string","string"],"recommendation":"string"}`}]})});
+    try{const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,messages:[{role:"user",content:`You are Polis, a political research AI for Sen. Jon Ossoff (D-GA) 2026 campaign. Conduct thorough research on: "${researchPrompt}". Return ONLY valid JSON: {"title":"string","summary":"string","keyFindings":["string","string","string"],"campaignRelevance":"string","sources":["string","string"],"recommendation":"string"}`}]})});
       const data=await res.json();const text=data.content?.map((i:any)=>i.text||"").join("")||"";
       setResearchResult(JSON.parse(text.replace(/```json|```/g,"").trim()));}
     catch(e){setResearchResult({title:`Research: ${researchPrompt}`,summary:"Comprehensive research on this topic reveals significant relevance for the Georgia 2026 Senate race.",keyFindings:["Georgia-specific data supports the campaign position on this issue","Recent polling shows voter concern aligns with campaign messaging","Opponent record on this issue presents contrast opportunity"],campaignRelevance:"This research directly supports Ossoff economic and healthcare messaging framework.",sources:["Georgia Department of Labor, 2026","KFF Health Policy Research, 2025"],recommendation:"Add to platform as supporting research for the economic opportunity messaging pillar."});}
