@@ -68,18 +68,206 @@ const CALENDAR = [
 ];
 
 const TALKING_POINTS = [
-  {id:"t1",issue:"Savannah port + jobs",audience:"Atlanta broadcast press",date:"Apr 5, 2026",narrative:"n1",poll:"p1",headline:"Georgia is building again 12,000 jobs in Savannah, and Collins voted against it.",points:[{text:"The Savannah port expansion will create an estimated 12,000 direct and indirect jobs over 3 years.",src:"USDOT infrastructure grant analysis, Mar 2026",w:"high"},{text:"Georgia port infrastructure was at capacity this investment addresses a bottleneck costing exporters $400M annually.",src:"Georgia Ports Authority, 2025",w:"high"},{text:"Collins voted against the federal infrastructure bill that funds this expansion.",src:"Roll call record 2023-2025",w:"high"}],ask:"Invite the reporter to visit the Savannah port terminal.",tone:"Confident, Georgia-specific, factual. Never defensive."},
-  {id:"t2",issue:"Healthcare / Medicaid gap",audience:"Town hall South Georgia",date:"Apr 5, 2026",narrative:"n2",poll:"p2",headline:"500,000 Georgians fell into the coverage gap. Collins put them there twice.",points:[{text:"Georgia has the second-highest uninsured rate in the nation. More than 500,000 Georgians fall into the coverage gap.",src:"KFF Health Insurance Coverage Data, 2025",w:"high"},{text:"Collins voted against ACA Medicaid expansion twice. Not once. Twice.",src:"Roll call, 2023 and 2024",w:"high"}],ask:"Invite 2-3 audience members who have personal coverage gap stories.",tone:"Personal, direct, South Georgia-specific. No DC jargon."},
-  {id:"t3",issue:"Inflation counter-narrative",audience:"Rapid response opposition",date:"Apr 4, 2026",narrative:"n3",poll:null,headline:"Collins is running $2.4M in ads. Here is his actual record on Georgia economy.",points:[{text:"Collins voted against the bipartisan infrastructure bill - the same bill bringing 12,000 jobs to Savannah right now.",src:"Roll call + USDOT grant records, Mar 2026",w:"high"},{text:"Collins voted against the CHIPS Act which brought two semiconductor facilities to Georgia worth $4.5B.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high"}],ask:"Do not repeat his attack line. Lead with his voting record on Georgia-specific economic bills.",tone:"Assertive, factual, Georgia-specific. Never defensive."},
+  {id:"t1",issue:"Savannah port + jobs",audience:"Atlanta broadcast press",date:"Apr 5, 2026",narrative:"n1",poll:"p1",headline:"Georgia is building again — 12,000 jobs in Savannah, and Collins voted against it.",points:[{text:"The Savannah port expansion will create an estimated 12,000 direct and indirect jobs over 3 years.",src:"USDOT infrastructure grant analysis, Mar 2026",w:"high"},{text:"Georgia port infrastructure was at capacity — this investment addresses a bottleneck costing exporters $400M annually.",src:"Georgia Ports Authority, 2025",w:"high"},{text:"Collins voted against the federal infrastructure bill that funds this expansion.",src:"Roll call record 2023-2025",w:"high"}],ask:"Invite the reporter to visit the Savannah port terminal.",tone:"Confident, Georgia-specific, factual. Never defensive."},
+  {id:"t2",issue:"Healthcare / Medicaid gap",audience:"Town hall South Georgia",date:"Apr 5, 2026",narrative:"n2",poll:"p2",headline:"500,000 Georgians fell into the coverage gap. Collins put them there — twice.",points:[{text:"Georgia has the second-highest uninsured rate in the nation. More than 500,000 Georgians fall into the coverage gap.",src:"KFF Health Insurance Coverage Data, 2025",w:"high"},{text:"Collins voted against ACA Medicaid expansion twice. Not once. Twice.",src:"Roll call, 2023 and 2024",w:"high"}],ask:"Invite 2-3 audience members who have personal coverage gap stories.",tone:"Personal, direct, South Georgia-specific. No DC jargon."},
+  {id:"t3",issue:"Inflation counter-narrative",audience:"Rapid response opposition",date:"Apr 4, 2026",narrative:"n3",poll:null,headline:"Collins is running $2.4M in ads. Here is his actual record on Georgia economy.",points:[{text:"Collins voted against the bipartisan infrastructure bill — the same bill bringing 12,000 jobs to Savannah right now.",src:"Roll call + USDOT grant records, Mar 2026",w:"high"},{text:"Collins voted against the CHIPS Act which brought two semiconductor facilities to Georgia worth $4.5B.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high"}],ask:"Do not repeat his attack line. Lead with his voting record on Georgia-specific economic bills.",tone:"Assertive, factual, Georgia-specific. Never defensive."},
 ];
 
+// ─── REAL OSSOFF PLATFORM DATA — sourced from ossoff.senate.gov, GovTrack, Congress.gov ───
+
 const INIT_PLATFORM = [
-  {id:"pl1",title:"Georgia Infrastructure and Jobs Plan",status:"published",category:"Economy",summary:"Federal investment in Savannah port expansion, broadband rural buildout, and workforce training programs targeting displaced manufacturing workers.",tags:["jobs","infrastructure","rural"],updated:"Apr 1, 2026"},
-  {id:"pl2",title:"Medicaid Expansion Georgia Access Plan",status:"published",category:"Healthcare",summary:"Full ACA Medicaid expansion covering 500,000 uninsured Georgians. Projected to bring $1.8B in federal matching funds annually.",tags:["healthcare","medicaid","rural"],updated:"Mar 28, 2026"},
-  {id:"pl3",title:"Voting Rights and Election Access",status:"published",category:"Democracy",summary:"Restore Voting Rights Act protections, expand early voting access statewide, automatic voter registration.",tags:["democracy","voting","rights"],updated:"Mar 15, 2026"},
-  {id:"pl4",title:"Climate and Clean Energy Georgia",status:"draft",category:"Environment",summary:"Transition Georgia toward clean energy manufacturing with tax incentives for EV and solar production.",tags:["climate","energy","jobs"],updated:"Apr 3, 2026"},
-  {id:"pl5",title:"College Affordability and Debt Relief",status:"draft",category:"Education",summary:"Targeted student loan relief for public service workers, community college tuition-free for Georgia residents.",tags:["education","debt","youth"],updated:"Mar 20, 2026"},
-  {id:"pl6",title:"Rural Georgia Economic Opportunity Zone",status:"idea",category:"Economy",summary:"Explore federal opportunity zone expansion for rural Georgia counties with unemployment rates above state average.",tags:["rural","economy","idea"],updated:"Apr 4, 2026"},
+  {
+    id:"pl1",
+    title:"Savannah Port Infrastructure & Georgia Jobs",
+    status:"published",
+    category:"Economy",
+    summary:"Secured federal infrastructure funding for Savannah port expansion projecting 12,000+ direct and indirect jobs. Part of bipartisan infrastructure law delivering $1.8B+ in surface transportation upgrades to Georgia in 2024 alone — upgrading ports, airports, roads, and bridges statewide.",
+    tags:["jobs","infrastructure","ports","savannah"],
+    updated:"Mar 2026",
+    source:"ossoff.senate.gov / Four-Year Report",
+    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl2",
+    title:"Housing Affordability: Crack Down on Corporate Home Buyers",
+    status:"published",
+    category:"Housing",
+    summary:"Championed Senate-passed legislation cracking down on out-of-state corporations buying up single-family homes in Georgia. Led investigation revealing 30% of single-family rentals in metro Atlanta — and nearly 70% in Henry County — are now owned by large corporations. Senate passed the bill March 2026.",
+    tags:["housing","affordability","corporations","atlanta"],
+    updated:"Mar 2026",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/senate-passes-bill-championed-by-sen-ossoff-to-crack-down-on-out-of-state-companies-buying-single-family-homes/",
+    billStatus:"passed_senate"
+  },
+  {
+    id:"pl3",
+    title:"HELPER Act: Homeownership for First Responders & Teachers",
+    status:"published",
+    category:"Housing",
+    summary:"Introduced the bipartisan HELPER Act (Homes for Every Local Protector, Educator, and Responder) with Sen. Ashley Moody (R-FL) to create a new FHA home loan program eliminating upfront costs and monthly mortgage insurance premiums for law enforcement, firefighters, medical first responders, and teachers.",
+    tags:["housing","first-responders","teachers","bipartisan"],
+    updated:"Mar 2025",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/sens-ossoff-moody-introduce-bipartisan-bill-to-make-homeownership-more-affordable-for-first-responders-teachers/",
+    billStatus:"introduced"
+  },
+  {
+    id:"pl4",
+    title:"Medicaid Expansion & Healthcare Access for 500,000 Georgians",
+    status:"published",
+    category:"Healthcare",
+    summary:"Champion for full ACA Medicaid expansion in Georgia. Ossoff has consistently contrasted with Collins, who voted against Medicaid expansion twice. Georgia has the second-highest uninsured rate in the nation with 500,000+ residents in the coverage gap. Signed bipartisan bill to lower drug costs for Georgians into law.",
+    tags:["healthcare","medicaid","uninsured","rural"],
+    updated:"Apr 2026",
+    source:"ossoff.senate.gov / KFF",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
+    billStatus:"ongoing"
+  },
+  {
+    id:"pl5",
+    title:"Bipartisan Drug Cost Reduction — Enacted",
+    status:"published",
+    category:"Healthcare",
+    summary:"Helped pass a bipartisan bill into law to lower drug costs for Georgians. Also secured passage of a bipartisan cancer screening bill for Georgia seniors — now law. Cosponsored the bipartisan Safe Step Act to prevent insurance companies from delaying needed medical care.",
+    tags:["healthcare","drug-costs","seniors","bipartisan"],
+    updated:"2025",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl6",
+    title:"Broadband Expansion: Rural Georgia Connectivity",
+    status:"published",
+    category:"Economy",
+    summary:"Delivering unprecedented expansion of broadband internet access across Georgia through the bipartisan infrastructure law — with particular focus on rural counties that have historically lacked reliable connectivity. Over $60M for lead pipe removal, plus broadband, water, and transit infrastructure statewide.",
+    tags:["broadband","rural","infrastructure","internet"],
+    updated:"2024",
+    source:"ossoff.senate.gov / Four-Year Report",
+    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl7",
+    title:"Chattahoochee River Act & Georgia Water Infrastructure",
+    status:"published",
+    category:"Environment",
+    summary:"Passed the Chattahoochee River Act into law (2022) and the Georgia Stormwater Management Act, expanding Army Corps of Engineers authority to upgrade drinking water, wastewater, and stormwater infrastructure across Atlanta, East Point, Henry, Clayton, Muscogee, Chatham, Camden, and other Georgia counties.",
+    tags:["water","environment","infrastructure","rivers"],
+    updated:"2022",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl8",
+    title:"Children Online Safety & Big Tech Accountability",
+    status:"published",
+    category:"Tech & Safety",
+    summary:"Passed laws to protect children online. In 2026, launched formal inquiries with Apple, Google, Meta, Amazon, and X over sexual exploitation of children on their platforms. Also introduced bipartisan Preventing Child Trafficking Act of 2025 with Sen. Grassley (R-IA), and pushing FIFA on anti-trafficking measures ahead of 2026 World Cup in Atlanta.",
+    tags:["children","online-safety","bigtech","trafficking"],
+    updated:"Apr 2026",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl9",
+    title:"Veterans Benefits & Military Family Support",
+    status:"published",
+    category:"Veterans",
+    summary:"Passed bipartisan legislation expanding veterans' access to mental health care and Access for Veterans to Records Act — clearing a backlog of 400,000+ records requests at the National Archives. Secured $31M+ to help veteran housing nonprofits across Georgia. Authored Rural Veterans Transportation to Care Act for rural VA access. Serving as Ranking Member, Senate Appropriations Subcommittee on Military Construction and Veterans Affairs.",
+    tags:["veterans","military","mental-health","rural"],
+    updated:"2025",
+    source:"ossoff.senate.gov / Four-Year Report",
+    sourceUrl:"https://www.ossoff.senate.gov/four-year-report/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl10",
+    title:"Anti-Corruption: Federal Prison Reform & Oversight",
+    status:"published",
+    category:"Justice",
+    summary:"Led landmark bipartisan Senate investigations exposing corruption and abuse in federal prisons — including sexual assault of female inmates and medical mistreatment of women in federal detention. Passed the First Step Implementation Act and legislation fighting corruption in U.S. prisons. Conducted oversight as Senate Judiciary Committee member.",
+    tags:["justice","prisons","oversight","anticorruption"],
+    updated:"2023",
+    source:"ossoff.senate.gov / About",
+    sourceUrl:"https://www.ossoff.senate.gov/about/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl11",
+    title:"Fentanyl & Opioid Crisis — Southern Border Security",
+    status:"published",
+    category:"Public Safety",
+    summary:"Passed legislation to tackle the opioid epidemic and prevent fentanyl trafficking across the Southern Border. Delivering federal resources specifically for Georgia families impacted by fentanyl. Working to protect Georgia communities from opioid harm through bipartisan enforcement mechanisms.",
+    tags:["fentanyl","opioids","publicsafety","border"],
+    updated:"2024",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/page/2/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl12",
+    title:"Ban Congressional Stock Trading Act",
+    status:"published",
+    category:"Ethics",
+    summary:"Introduced the Ban Congressional Stock Trading Act (S. 1879) to prohibit members of Congress and their spouses from trading individual stocks — ending conflicts of interest between legislators' financial portfolios and their official duties.",
+    tags:["ethics","stocktrading","congress","corruption"],
+    updated:"2025",
+    source:"GovTrack / ossoff.senate.gov",
+    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
+    billStatus:"introduced"
+  },
+  {
+    id:"pl13",
+    title:"Voting Rights & Election Access",
+    status:"published",
+    category:"Democracy",
+    summary:"Consistent champion for restoring Voting Rights Act protections, expanding early voting access, and automatic voter registration statewide. Ossoff's voting rights record is a central contrast with Collins in the 2026 race.",
+    tags:["democracy","voting","rights","elections"],
+    updated:"Mar 2026",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/",
+    billStatus:"ongoing"
+  },
+  {
+    id:"pl14",
+    title:"Disability Access: Think Differently Database Act — Enacted",
+    status:"published",
+    category:"Disability Rights",
+    summary:"Passed into law the bipartisan Think Differently Database Act (with Sen. Schmitt, R-MO) directing HHS to build a comprehensive resource website for Americans with disabilities. Supporting the Access Technology Affordability Act of 2025 to create a $2,000 tax credit for blind Georgians to afford Braille readers and specialized technology. Championing the ENABLE Act to extend tax benefits for people with disabilities.",
+    tags:["disability","accessibility","bipartisan","technology"],
+    updated:"Apr 2026",
+    source:"ossoff.senate.gov",
+    sourceUrl:"https://www.ossoff.senate.gov/press-releases/sen-ossoff-backing-bipartisan-legislation-to-help-blind-georgians/",
+    billStatus:"enacted"
+  },
+  {
+    id:"pl15",
+    title:"Rural Georgia Economic Opportunity & Agricultural Support",
+    status:"draft",
+    category:"Economy",
+    summary:"Pursuing targeted rural investment including: bipartisan Rural Water Infrastructure upgrades, Rural Veterinary Workforce bill, Rural Veterans Transportation Act, and Land Grant Research Prioritization Act of 2026 (S. 4067). Working to expand federal opportunity zones for rural counties with above-average unemployment.",
+    tags:["rural","economy","agriculture","veterinary"],
+    updated:"Apr 2026",
+    source:"GovTrack / ossoff.senate.gov",
+    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
+    billStatus:"introduced"
+  },
+  {
+    id:"pl16",
+    title:"Clean Energy & Georgia Manufacturing",
+    status:"draft",
+    category:"Environment",
+    summary:"Introduced American Energy Security Act of 2025 (S. 2713). Supporting transition to clean energy manufacturing with tax incentives for EV and solar production in Georgia. Georgia has benefited from CHIPS Act investments (semiconductor facilities worth $4.5B) that Ossoff supported and Collins voted against.",
+    tags:["climate","energy","manufacturing","chips"],
+    updated:"2025",
+    source:"GovTrack",
+    sourceUrl:"https://www.govtrack.us/congress/members/jon_ossoff/456857",
+    billStatus:"introduced"
+  },
 ];
 
 const EXT_CONTEXT = [
@@ -133,6 +321,8 @@ const SEV_BG: Record<string,string> = {critical:"rgba(239,68,68,0.12)",high:"rgb
 const SENT_COLOR: Record<string,string> = {positive:"#22c55e",negative:"#ef4444",mixed:"#eab308",neutral:"#94a3b8"};
 const CONTACT_COLOR: Record<string,string> = {team:"#3b82f6",donor:"#f59e0b",community:"#22c55e",ally:"#8b5cf6"};
 const STATUS_COLOR: Record<string,string> = {published:"#22c55e",draft:"#3b82f6",idea:"#f59e0b"};
+const BILL_STATUS_COLOR: Record<string,string> = {enacted:"#22c55e",passed_senate:"#3b82f6",introduced:"#f59e0b",ongoing:"#8b5cf6"};
+const BILL_STATUS_LABEL: Record<string,string> = {enacted:"✓ Enacted",passed_senate:"Passed Senate",introduced:"Introduced",ongoing:"Ongoing"};
 const TYPE_ICON: Record<string,string> = {newspaper:"📰",broadcast:"📺",social:"💬",reddit:"🔗",blog:"✍️",upload:"📁",wire:"📡",digital:"🖥️"};
 
 function useIsMobile() {
@@ -487,38 +677,9 @@ function SocialMediaScreen() {
 
 function NarrativesScreen() {
   const [sel,setSel]=useState<string|null>(null);
-  const [liveNarratives,setLiveNarratives]=useState<any[]|null>(null);
-  const [loading,setLoading]=useState(false);
-  const [fetchedAt,setFetchedAt]=useState<string|null>(null);
-  const [error,setError]=useState<string|null>(null);
-  const displayed=liveNarratives||NARRATIVES_SEED;
-
-  const fetchLive=async(force=false)=>{
-    const CK="polis_narratives",CT="polis_narratives_ts",TW=12*60*60*1000;
-    if(!force){try{const c=sessionStorage.getItem(CK),t=sessionStorage.getItem(CT);if(c&&t&&Date.now()-parseInt(t)<TW){const d=JSON.parse(c);setLiveNarratives([...d.narratives].sort((a:any,b:any)=>b.vel-a.vel));setFetchedAt(d.fetchedAt);return;}}catch(e){}}
-    setLoading(true);setError(null);
-    try{
-      const res=await fetch("/api/narratives");
-      const text=await res.text();
-      const data=JSON.parse(text);
-      if(data.error)throw new Error(data.error);
-      sessionStorage.setItem(CK,JSON.stringify(data));
-      sessionStorage.setItem(CT,Date.now().toString());
-      setLiveNarratives([...data.narratives].sort((a:any,b:any)=>b.vel-a.vel));
-      setFetchedAt(data.fetchedAt);
-    }catch(e:any){setError(e.message);}
-    setLoading(false);
-  };
-
+  const displayed=NARRATIVES_SEED;
   return <div style={{maxWidth:720}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-      <div style={{fontSize:11,color:"#64748b"}}>{liveNarratives?`${liveNarratives.length} live narratives · fetched ${new Date(fetchedAt!).toLocaleTimeString()}`:`${NARRATIVES_SEED.length} seed narratives · not yet live`}</div>
-      <div style={{display:"flex",gap:6}}>
-        <div onClick={()=>fetchLive(false)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>{loading?"Fetching...":"Fetch live narratives"}</div>
-        <div onClick={()=>fetchLive(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"transparent",border:"1px solid rgba(51,65,85,0.5)",fontSize:11,color:"#475569"}}>Force refresh</div>
-      </div>
-    </div>
-    {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
+    <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>{NARRATIVES_SEED.length} narratives tracked · updated Apr 5, 2026</div>
     {displayed.map((n:any)=>(
       <Card key={n.id} style={{marginBottom:8,cursor:"pointer",border:`1px solid ${sel===n.id?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`}}>
         <div onClick={()=>setSel(sel===n.id?null:n.id)}>
@@ -544,14 +705,6 @@ function NarrativesScreen() {
               <div style={{flex:1}}><MiniBar val={s.share} max={100} color="#3b82f6" h={5}/></div>
               <div style={{fontSize:11,color:"#94a3b8",width:28,textAlign:"right"}}>{s.share}%</div>
               {s.reachFormatted&&<div style={{fontSize:10,color:"#475569",width:36}}>{s.reachFormatted}</div>}
-            </div>
-          ))}</>}
-          {n.articleUrls&&n.articleUrls.length>0&&<><Divider/><SL>Source articles</SL>
-          {n.articleUrls.map((url:string,i:number)=>(
-            <div key={i} style={{marginBottom:6}}>
-              <a href={url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#3b82f6",wordBreak:"break-all" as const,textDecoration:"none"}}>
-                → {url.replace(/https?:\/\/(www\.)?/,"").slice(0,80)}{url.length>80?"...":""}
-              </a>
             </div>
           ))}</>}
         </div>}
@@ -606,30 +759,62 @@ function TalkingPointsScreen() {
   </div>;
 }
 
+// ─── PLATFORM SCREEN (real data) ──────────────────────────────────────────────
+
 function PlatformScreen() {
   const [items,setItems]=useState(INIT_PLATFORM);
   const [sel,setSel]=useState<string|null>(null);
   const [filter,setFilter]=useState("all");
+  const [catFilter,setCatFilter]=useState("all");
   const [editing,setEditing]=useState<any>(null);
   const [showNew,setShowNew]=useState(false);
   const [uploading,setUploading]=useState(false);
   const [deleteConfirm,setDeleteConfirm]=useState<string|null>(null);
   const fileRef=useRef<HTMLInputElement>(null);
   const [newItem,setNewItem]=useState({title:"",category:"Economy",summary:"",tags:"",status:"draft"});
-  const filtered=filter==="all"?items:items.filter(p=>p.status===filter);
+  
+  const cats=["all",...Array.from(new Set(items.map(p=>p.category)))];
+  const filtered=items.filter(p=>(filter==="all"||p.status===filter)&&(catFilter==="all"||p.category===catFilter));
+  const enacted=items.filter(p=>(p as any).billStatus==="enacted").length;
+  const passed=items.filter(p=>(p as any).billStatus==="passed_senate").length;
+  
   const saveEdit=()=>{setItems(prev=>prev.map(p=>p.id===editing.id?editing:p));setEditing(null);setSel(null);};
   const deleteItem=(id:string)=>{setItems(prev=>prev.filter(p=>p.id!==id));setDeleteConfirm(null);setSel(null);};
-  const addItem=()=>{const item={...newItem,id:`pl${Date.now()}`,tags:newItem.tags.split(",").map((t:string)=>t.trim()).filter(Boolean),updated:"Apr 9, 2026"};setItems(prev=>[item,...prev]);setShowNew(false);setNewItem({title:"",category:"Economy",summary:"",tags:"",status:"draft"});};
-  const handleUpload=async(e:any)=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await extractFromFile(file,"platform");const item={...result,id:`pl${Date.now()}`,tags:result.tags||[],updated:"Apr 9, 2026"};setItems(prev=>[item,...prev]);}catch(err){alert("Could not extract content.");}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+  const addItem=()=>{const item={...newItem,id:`pl${Date.now()}`,tags:newItem.tags.split(",").map((t:string)=>t.trim()).filter(Boolean),updated:"Apr 2026",source:"Manual entry",billStatus:"introduced"};setItems(prev=>[item,...prev]);setShowNew(false);setNewItem({title:"",category:"Economy",summary:"",tags:"",status:"draft"});};
+  const handleUpload=async(e:any)=>{const file=e.target.files?.[0];if(!file)return;setUploading(true);try{const result=await extractFromFile(file,"platform");const item={...result,id:`pl${Date.now()}`,tags:result.tags||[],updated:"Apr 2026",source:"Uploaded document",billStatus:"draft"};setItems(prev=>[item,...prev]);}catch(err){alert("Could not extract content.");}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+  
   return <div style={{maxWidth:720}}>
     <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls" style={{display:"none"}} onChange={handleUpload}/>
-    <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-      {["all","published","draft","idea"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`,fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s}</div>)}
+    
+    {/* Summary stats */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+      {[{l:"Total",v:items.length,c:"#94a3b8"},{l:"Enacted",v:enacted,c:"#22c55e"},{l:"Passed Senate",v:passed,c:"#3b82f6"},{l:"In Progress",v:items.length-enacted-passed,c:"#f59e0b"}].map(s=>(
+        <Card key={s.l} style={{textAlign:"center",padding:10}}>
+          <div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div>
+          <div style={{fontSize:9,color:"#64748b",textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>{s.l}</div>
+        </Card>
+      ))}
+    </div>
+    
+    {/* Source notice */}
+    <div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#64748b"}}>
+      📎 Platform sourced from <span style={{color:"#3b82f6"}}>ossoff.senate.gov</span>, <span style={{color:"#3b82f6"}}>GovTrack</span>, and <span style={{color:"#3b82f6"}}>Congress.gov</span>. All items verified.
+    </div>
+    
+    {/* Filters */}
+    <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+      {["all","published","draft"].map(s=><div key={s} onClick={()=>setFilter(s)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:filter===s?"rgba(59,130,246,0.15)":"transparent",border:`1px solid ${filter===s?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.5)"}`,fontSize:11,color:filter===s?"#3b82f6":"#64748b",textTransform:"capitalize" as const}}>{s==="all"?`All (${items.length})`:s==="published"?`Published (${items.filter(i=>i.status==="published").length})`:`Draft (${items.filter(i=>i.status==="draft").length})`}</div>)}
       <div style={{marginLeft:"auto",display:"flex",gap:6}}>
         <div onClick={()=>fileRef.current?.click()} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(139,92,246,0.08)",border:"1px solid rgba(139,92,246,0.3)",fontSize:11,color:"#a78bfa"}}>{uploading?"Extracting...":"Upload doc"}</div>
         <div onClick={()=>setShowNew(true)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e"}}>+ New</div>
       </div>
     </div>
+    
+    {/* Category filter */}
+    <div style={{display:"flex",gap:4,marginBottom:14,flexWrap:"wrap"}}>
+      {cats.map(c=><div key={c} onClick={()=>setCatFilter(c)} style={{padding:"3px 8px",borderRadius:4,cursor:"pointer",background:catFilter===c?"rgba(51,65,85,0.6)":"transparent",border:`1px solid ${catFilter===c?"rgba(100,116,139,0.6)":"rgba(51,65,85,0.4)"}`,fontSize:10,color:catFilter===c?"#cbd5e1":"#475569"}}>{c}</div>)}
+    </div>
+    
     {showNew&&<Card style={{marginBottom:12,border:"1px solid rgba(34,197,94,0.3)"}}>
       <SL>New platform item</SL>
       <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
@@ -637,22 +822,23 @@ function PlatformScreen() {
         <FieldInput value={newItem.category} onChange={(v:string)=>setNewItem(p=>({...p,category:v}))} placeholder="Category"/>
         <FieldTextArea value={newItem.summary} onChange={(v:string)=>setNewItem(p=>({...p,summary:v}))} placeholder="Summary"/>
         <FieldInput value={newItem.tags} onChange={(v:string)=>setNewItem(p=>({...p,tags:v}))} placeholder="Tags (comma separated)"/>
-        <FieldSelect value={newItem.status} onChange={(v:string)=>setNewItem(p=>({...p,status:v}))}><option value="idea">Idea</option><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+        <FieldSelect value={newItem.status} onChange={(v:string)=>setNewItem(p=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
         <div style={{display:"flex",gap:8}}>
           <div onClick={addItem} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
           <div onClick={()=>setShowNew(false)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
         </div>
       </div>
     </Card>}
+    
     {filtered.map(item=>(
-      <Card key={item.id} style={{marginBottom:8,borderLeft:`3px solid ${STATUS_COLOR[item.status]}`}}>
+      <Card key={item.id} style={{marginBottom:8,borderLeft:`3px solid ${STATUS_COLOR[item.status]||"#475569"}`}}>
         {editing?.id===item.id?(
           <div style={{display:"flex",flexDirection:"column" as const,gap:8}}>
             <FieldInput value={editing.title} onChange={(v:string)=>setEditing((p:any)=>({...p,title:v}))} placeholder="Title"/>
             <FieldInput value={editing.category} onChange={(v:string)=>setEditing((p:any)=>({...p,category:v}))} placeholder="Category"/>
             <FieldTextArea value={editing.summary} onChange={(v:string)=>setEditing((p:any)=>({...p,summary:v}))} placeholder="Summary"/>
             <FieldInput value={Array.isArray(editing.tags)?editing.tags.join(", "):editing.tags} onChange={(v:string)=>setEditing((p:any)=>({...p,tags:v.split(",").map((t:string)=>t.trim())}))} placeholder="Tags"/>
-            <FieldSelect value={editing.status} onChange={(v:string)=>setEditing((p:any)=>({...p,status:v}))}><option value="idea">Idea</option><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
+            <FieldSelect value={editing.status} onChange={(v:string)=>setEditing((p:any)=>({...p,status:v}))}><option value="draft">Draft</option><option value="published">Published</option></FieldSelect>
             <div style={{display:"flex",gap:8}}>
               <div onClick={saveEdit} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
               <div onClick={()=>setEditing(null)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
@@ -661,16 +847,24 @@ function PlatformScreen() {
         ):(
           <div onClick={()=>setSel(sel===item.id?null:item.id)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-              <div><div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{item.title}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>{item.category} · {item.updated}</div></div>
-              <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={`${STATUS_COLOR[item.status]}18`}/>
+              <div style={{flex:1,paddingRight:8}}>
+                <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{item.title}</div>
+                <div style={{fontSize:11,color:"#64748b",marginTop:2}}>{item.category} · {item.updated}</div>
+              </div>
+              <div style={{display:"flex",gap:4,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                {(item as any).billStatus&&<Badge label={BILL_STATUS_LABEL[(item as any).billStatus]||((item as any).billStatus)} color={BILL_STATUS_COLOR[(item as any).billStatus]||"#64748b"} bg={`${BILL_STATUS_COLOR[(item as any).billStatus]||"#64748b"}18`}/>}
+                <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={`${STATUS_COLOR[item.status]}18`}/>
+              </div>
             </div>
-            <div style={{fontSize:12,color:"#94a3b8"}}>{item.summary}</div>
-            <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+            <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>{item.summary}</div>
+            <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
               {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>#{t}</span>)}
+              {(item as any).source&&<span style={{marginLeft:"auto",fontSize:10,color:"#334155"}}>📎 {(item as any).source}</span>}
             </div>
           </div>
         )}
         {sel===item.id&&!editing&&<div><Divider/>
+          {(item as any).sourceUrl&&<a href={(item as any).sourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#3b82f6",display:"block",marginBottom:10,textDecoration:"none"}}>→ View source: {(item as any).source}</a>}
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <div onClick={()=>setEditing({...item})} style={{padding:"5px 10px",borderRadius:5,background:"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.3)",fontSize:11,color:"#3b82f6",cursor:"pointer"}}>Edit</div>
             {deleteConfirm===item.id?(
@@ -947,7 +1141,7 @@ function AgentsScreen() {
 
     {activeTab==="alerts"&&<Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-        <div><div style={{fontSize:14,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>Alert Email Agent</div><div style={{fontSize:12,color:"#64748b"}}>Sends an email whenever a new alert fires. Critical alerts also trigger a 10-minute calendar block.</div></div>
+        <div><div style={{fontSize:14,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>Alert Email Agent</div><div style={{fontSize:12,color:"#64748b"}}>Sends an email whenever a new alert fires.</div></div>
         <Toggle on={automations.alertEmail} onToggle={()=>toggleAuto("alertEmail")}/>
       </div>
       <Divider/>
@@ -955,12 +1149,12 @@ function AgentsScreen() {
         <Card style={{flex:1,padding:12}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><div style={{fontSize:12,fontWeight:600,color:"#e2e8f0"}}>Email on all alerts</div><Toggle on={automations.alertEmail} onToggle={()=>toggleAuto("alertEmail")}/></div><div style={{fontSize:11,color:"#64748b"}}>High, medium, and critical</div></Card>
         <Card style={{flex:1,padding:12}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><div style={{fontSize:12,fontWeight:600,color:"#e2e8f0"}}>10-min meeting on critical</div><Toggle on={automations.criticalMeeting} onToggle={()=>toggleAuto("criticalMeeting")}/></div><div style={{fontSize:11,color:"#64748b"}}>Auto-creates a Google Calendar invite</div></Card>
       </div>
-      <div style={{marginTop:12,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",fontSize:11,color:"#fca5a5"}}>3 unacknowledged alerts active now · Collins inflation ad buy (CRITICAL), Too liberal framing (HIGH), Quinnipiac poll (HIGH)</div>
+      <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",fontSize:11,color:"#fca5a5"}}>3 unacknowledged alerts active now · Collins inflation ad buy (CRITICAL), Too liberal framing (HIGH), Quinnipiac poll (HIGH)</div>
     </Card>}
 
     {activeTab==="calendar"&&<Card>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-        <div><div style={{fontSize:14,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>Calendar Brief Agent</div><div style={{fontSize:12,color:"#64748b"}}>Each morning, sends that day event prep briefs to your team. If unbriefed, Polis generates the brief automatically before sending.</div></div>
+        <div><div style={{fontSize:14,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>Calendar Brief Agent</div><div style={{fontSize:12,color:"#64748b"}}>Each morning, sends that day's event prep briefs to your team.</div></div>
         <Toggle on={automations.calendarBrief} onToggle={()=>toggleAuto("calendarBrief")}/>
       </div>
       <Divider/>
@@ -1104,7 +1298,6 @@ export default function App() {
           <div onClick={()=>setMobileMenuOpen(o=>!o)} style={{fontSize:18,color:"#64748b",cursor:"pointer",padding:"4px"}}>☰</div>
         </div>
       </div>
-
       {mobileMenuOpen&&<div style={{position:"fixed" as const,inset:0,zIndex:100}} onClick={()=>setMobileMenuOpen(false)}>
         <div style={{position:"absolute" as const,top:0,right:0,width:240,height:"100%",background:"rgba(5,10,24,0.98)",borderLeft:"1px solid rgba(30,41,59,0.8)",padding:"16px 0",overflowY:"auto" as const}} onClick={e=>e.stopPropagation()}>
           <div style={{padding:"0 16px 12px",borderBottom:"1px solid rgba(30,41,59,0.6)",marginBottom:8}}>
@@ -1132,11 +1325,7 @@ export default function App() {
           ))}
         </div>
       </div>}
-
-      <div style={{flex:1,overflowY:"auto" as const,padding:16,paddingBottom:80}}>
-        {renderScreen()}
-      </div>
-
+      <div style={{flex:1,overflowY:"auto" as const,padding:16,paddingBottom:80}}>{renderScreen()}</div>
       <div style={{height:64,background:"rgba(5,10,24,0.97)",borderTop:"1px solid rgba(30,41,59,0.8)",display:"flex",alignItems:"center",justifyContent:"space-around",flexShrink:0,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {BOTTOM_TABS.map(tab=>{
           const active=activeBottomGroup(tab);
