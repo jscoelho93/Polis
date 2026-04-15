@@ -67,11 +67,6 @@ const CALENDAR = [
   {id:"c5",title:"AJC Editorial Board",type:"interview",date:"Apr 23",time:"2:00 PM",loc:"Atlanta, GA",prep:"unbriefed",urgency:"medium",brief:null},
 ];
 
-const TALKING_POINTS = [
-  {id:"t1",issue:"Savannah port + jobs",audience:"Atlanta broadcast press",date:"Apr 5, 2026",narrative:"n1",poll:"p1",platform:["pl2"],headline:"Georgia is building again — 12,000 jobs in Savannah, and Collins voted against it.",points:[{text:"The Savannah port expansion will create an estimated 12,000 direct and indirect jobs over 3 years.",src:"USDOT infrastructure grant analysis, Mar 2026",w:"high"},{text:"Georgia port infrastructure was at capacity — this investment addresses a bottleneck costing exporters $400M annually.",src:"Georgia Ports Authority, 2025",w:"high"},{text:"Collins voted against the federal infrastructure bill that funds this expansion.",src:"Roll call record 2023-2025",w:"high"}],ask:"Invite the reporter to visit the Savannah port terminal.",tone:"Confident, Georgia-specific, factual. Never defensive."},
-  {id:"t2",issue:"Healthcare / Medicaid gap",audience:"Town hall South Georgia",date:"Apr 5, 2026",narrative:"n2",poll:"p2",platform:["pl1"],headline:"500,000 Georgians fell into the coverage gap. Collins put them there — twice.",points:[{text:"Georgia has the second-highest uninsured rate in the nation. More than 500,000 Georgians fall into the coverage gap.",src:"KFF Health Insurance Coverage Data, 2025",w:"high"},{text:"Collins voted against ACA Medicaid expansion twice. Not once. Twice.",src:"Roll call, 2023 and 2024",w:"high"}],ask:"Invite 2-3 audience members who have personal coverage gap stories.",tone:"Personal, direct, South Georgia-specific. No DC jargon."},
-  {id:"t3",issue:"Inflation counter-narrative",audience:"Rapid response opposition",date:"Apr 4, 2026",narrative:"n3",poll:null,platform:["pl2","pl4"],headline:"Collins is running $2.4M in ads. Here is his actual record on Georgia economy.",points:[{text:"Collins voted against the bipartisan infrastructure bill — the same bill bringing 12,000 jobs to Savannah right now.",src:"Roll call + USDOT grant records, Mar 2026",w:"high"},{text:"Collins voted against the CHIPS Act which brought two semiconductor facilities to Georgia worth $4.5B.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high"}],ask:"Do not repeat his attack line. Lead with his voting record on Georgia-specific economic bills.",tone:"Assertive, factual, Georgia-specific. Never defensive."},
-];
 
 const INIT_PLATFORM = [
   {id:"pl1",title:"Healthcare Affordability and ACA Protection",status:"published",category:"Healthcare",summary:"Fighting to extend ACA tax credits that 1.4 million Georgians rely on — Republicans blocked his amendment twice. Launched investigation into rising health costs and hospital closures from Trump Medicaid cuts. St. Mary's Sacred Heart Hospital ended Labor & Delivery; Evans Memorial Hospital ICU at risk. Helped pass bipartisan bill to lower drug costs for Georgians (Mar 16, 2026) and bill to help children get faster medical care into law (Feb 26, 2026).",tags:["healthcare","ACA","medicaid","rural","drug costs"],updated:"Apr 14, 2026",src:"ossoff.senate.gov"},
@@ -501,6 +496,14 @@ function NarrativesScreen() {
   const [error,setError]=useState<string|null>(null);
   const displayed=liveNarratives||NARRATIVES_SEED;
 
+  useEffect(()=>{
+    // Auto-restore from sessionStorage on mount
+    try{
+      const c=sessionStorage.getItem("polis_narratives");
+      if(c){const d=JSON.parse(c);if(d.narratives?.length){setLiveNarratives([...d.narratives].sort((a:any,b:any)=>b.vel-a.vel));setFetchedAt(d.fetchedAt);}}
+    }catch(e){}
+  },[]);
+
   const fetchLive=async(force=false)=>{
     const CK="polis_narratives",CT="polis_narratives_ts",TW=12*60*60*1000;
     if(!force){
@@ -592,169 +595,240 @@ function TalkingPointsScreen() {
     }catch(e){}
     return NARRATIVES_SEED;
   };
+
   const [narratives,setNarratives]=useState<any[]>(getLiveNarratives);
+  const [agenda,setAgenda]=useState<any[]|null>(null);
+  const [building,setBuilding]=useState(false);
+  const [sel,setSel]=useState<number>(0);
+  const [customPrompt,setCustomPrompt]=useState("");
+  const [generating,setGenerating]=useState(false);
+  const [customResult,setCustomResult]=useState<any>(null);
+  const [showEvidence,setShowEvidence]=useState<string|null>(null);
 
   useEffect(()=>{
-    const interval=setInterval(()=>{
-      setNarratives(getLiveNarratives());
-    },3000);
+    const interval=setInterval(()=>setNarratives(getLiveNarratives()),3000);
     return ()=>clearInterval(interval);
   },[]);
 
-  const sorted=[...TALKING_POINTS].sort((a,b)=>{
-    const na=narratives.find((n:any)=>n.id===a.narrative);
-    const nb=narratives.find((n:any)=>n.id===b.narrative);
-    const va=na?Math.abs(na.vel):0;
-    const vb=nb?Math.abs(nb.vel):0;
-    return vb-va;
-  });
+  const threats=narratives.filter((n:any)=>n.sentiment==="negative").sort((a:any,b:any)=>b.vel-a.vel);
+  const positives=narratives.filter((n:any)=>n.sentiment==="positive").sort((a:any,b:any)=>b.vel-a.vel);
+  const topThreat=threats[0];
 
-  const topNegative=narratives.filter((n:any)=>n.sentiment==="negative").sort((a:any,b:any)=>b.vel-a.vel)[0];
-  const topPositive=narratives.filter((n:any)=>n.sentiment==="positive").sort((a:any,b:any)=>b.vel-a.vel)[0];
+  const buildAgenda=async()=>{
+    setBuilding(true);
+    setAgenda(null);
+    setSel(0);
+    setCustomResult(null);
 
-  const [sel,setSel]=useState(sorted[0]?.id||"t1");
-  const [generating,setGenerating]=useState(false);
-  const [aiResult,setAiResult]=useState<any>(null);
-  const [showPlatform,setShowPlatform]=useState<string|null>(null);
+    const narrativeList=narratives.slice(0,8).map((n:any)=>
+      n.id+": "+n.label+" ("+n.sentiment+", vol "+n.vol+", vel "+n.vel+")"
+    ).join(" | ");
 
-  const tp=TALKING_POINTS.find(t=>t.id===sel);
-  const narr=tp?.narrative?narratives.find((n:any)=>n.id===tp.narrative):null;
-  const poll=tp?.poll?BASE_POLLS.find(p=>p.id===tp.poll):null;
-  const platformItems=(tp as any)?.platform?((tp as any).platform as string[]).map((pid:string)=>INIT_PLATFORM.find((p:any)=>p.id===pid)).filter(Boolean):[];
+    const platformList=INIT_PLATFORM.filter((p:any)=>p.status==="published").map((p:any)=>
+      p.id+": "+p.title+" ["+p.category+"] - "+p.summary.slice(0,100)
+    ).join(" | ");
 
-  const isUrgent=(t:any)=>{
-    const n=narratives.find((x:any)=>x.id===t.narrative);
-    return n&&n.sentiment==="negative"&&n.vel>10;
+    const extList=EXT_CONTEXT.slice(0,4).map((e:any)=>
+      e.label+": "+e.val+" ("+e.change+")"
+    ).join(" | ");
+
+    const schema='[{"angle":"string","type":"counter|amplify|proactive","narrativeId":"string or null","platformIds":["pl1"],"headline":"string","points":[{"text":"string","src":"string","w":"high|medium|low"}],"ask":"string","tone":"string","audience":"string","urgency":"critical|high|medium|low"}]';
+
+    const prompt="You are Polis, intelligence AI for Sen. Jon Ossoff (D-GA, approval 47.8%, leading Collins +8.6pts). Build a full message agenda covering BOTH threats to counter AND positive narratives to amplify. Current narratives: "+narrativeList+" Ossoff legislative record: "+platformList+" Georgia economic context: "+extList+" Instructions: Generate exactly 4 angles. 2 should counter negative narratives using platform items as proof. 1 should amplify a positive narrative with platform backing. 1 should be proactive using external context data to make an offensive case. Each angle must reference specific platform item IDs and specific narrative IDs where applicable. Return ONLY valid JSON array, no markdown: "+schema;
+
+    try{
+      const res=await fetch("/api/anthropic",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,messages:[{role:"user",content:prompt}]})
+      });
+      const data=await res.json();
+      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
+      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+      setAgenda(parsed);
+    }catch(e){
+      setAgenda([
+        {angle:"Counter inflation attack",type:"counter",narrativeId:"n3",platformIds:["pl2","pl4"],headline:"Collins voted against the bill bringing 12,000 jobs to Savannah. His record, not his ads.",points:[{text:"Collins voted against the bipartisan infrastructure bill — the same bill creating 12,000 jobs at the Port of Savannah right now.",src:"Roll call + USDOT grant records, Mar 2026",w:"high"},{text:"Collins also voted against the CHIPS Act that brought $4.5B in semiconductor investment to Georgia.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high"}],ask:"Lead with his voting record. Never repeat his attack line.",tone:"Assertive, factual, Georgia-specific. Never defensive.",audience:"Rapid response / broadcast press",urgency:"critical"},
+        {angle:"Counter too-liberal framing",type:"counter",narrativeId:"n4",platformIds:["pl2","pl5"],headline:"Collins calls Ossoff too liberal. Ossoff passed more bipartisan bills than any freshman senator.",points:[{text:"Named most bipartisan member of Congress in July 2025. Has passed legislation with Republican senators in every session.",src:"ossoff.senate.gov, Jul 2025",w:"high"},{text:"Delivered 12,000 jobs to Savannah, upgraded water infrastructure across Georgia, and protected veterans — with Republican co-sponsors.",src:"ossoff.senate.gov Four-Year Report",w:"high"}],ask:"Name the Republican co-sponsors. Make bipartisanship concrete.",tone:"Confident, factual. Do not be defensive about values.",audience:"Atlanta suburbs / independents",urgency:"high"},
+        {angle:"Amplify Savannah jobs",type:"amplify",narrativeId:"n1",platformIds:["pl2"],headline:"Georgia is building again — 12,000 jobs in Savannah because Ossoff fought for it.",points:[{text:"The Savannah port expansion will create 12,000 direct and indirect jobs over 3 years — the result of the infrastructure bill Collins voted against.",src:"USDOT infrastructure grant analysis, Mar 2026",w:"high"},{text:"Savannah port container volume hit a record 5.2M TEU in 2025, up 8.4%. Federal investment is working.",src:"Georgia Ports Authority, 2025",w:"high"}],ask:"Invite reporters to visit the Savannah port terminal.",tone:"Confident, Georgia-specific, forward-looking.",audience:"Atlanta broadcast press",urgency:"medium"},
+        {angle:"Medicaid gap — Georgia economy case",type:"proactive",narrativeId:"n2",platformIds:["pl1"],headline:"Georgia's 16.1% uninsured rate is a $1.8B annual hit to the state economy. Collins put us here.",points:[{text:"Georgia has the second-highest uninsured rate in the nation — 16.1%. The Medicaid coverage gap costs the state an estimated $1.8B annually in federal matching funds.",src:"KFF 2025 + CBO estimate",w:"high"},{text:"Collins voted against Medicaid expansion twice. Not once. Twice. 500,000 Georgians remain uninsured as a direct result.",src:"Roll call, 2023 and 2024",w:"high"}],ask:"Frame as economic argument first, healthcare second. Use Georgia-specific dollar figures.",tone:"Personal, direct. South Georgia-specific. No DC jargon.",audience:"Town halls / rural Georgia",urgency:"medium"},
+      ]);
+    }
+    setBuilding(false);
   };
 
-  const generate=async()=>{
+  const generateCustom=async()=>{
+    if(!customPrompt.trim())return;
     setGenerating(true);
-    const topNarr=topNegative||topPositive;
-    const platformContext=INIT_PLATFORM.slice(0,4).map((p:any)=>p.title+": "+p.summary.slice(0,120)).join(" | ");
-    const narrativeContext=topNarr?"Top threat: "+topNarr.label+" (vol "+topNarr.vol+", vel +"+topNarr.vel+"). Detail: "+topNarr.detail:"";
-    const jsonSchema='{"headline":"string","urgency":"critical|high|medium","threat":"string","points":[{"text":"string","src":"string","w":"high|medium|low","platformRef":"string"}],"ask":"string","tone":"string"}';
-    const prompt="You are Polis, a political intelligence AI for Sen. Jon Ossoff (D-GA). Generate urgent talking points grounded in his real legislative record. Current situation: "+narrativeContext+" Ossoff legislative record (use as evidence): "+platformContext+" Ossoff approval: 47.8%, leading Collins by +8.6pts. Target: undecided suburban Georgia voters. Return ONLY valid JSON, no markdown: "+jsonSchema;
+    setCustomResult(null);
+    const platformList=INIT_PLATFORM.filter((p:any)=>p.status==="published").map((p:any)=>
+      p.title+" - "+p.summary.slice(0,80)
+    ).join(" | ");
+    const topNarrStr=topThreat?"Current top threat: "+topThreat.label+" (vel +"+topThreat.vel+")":"";
+    const extStr=EXT_CONTEXT.slice(0,3).map((e:any)=>e.label+": "+e.val).join(", ");
+    const schema2='{"headline":"string","points":[{"text":"string","src":"string","w":"high|medium|low"}],"ask":"string","tone":"string"}';
+    const prompt2="You are Polis. Generate talking points for Sen. Jon Ossoff (D-GA). Situation: "+customPrompt+". "+topNarrStr+". Georgia economic context: "+extStr+". Use this legislative record as evidence: "+platformList+". Return ONLY valid JSON, no markdown: "+schema2;
     try{
-      const res=await fetch("/api/anthropic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt}]})});
+      const res=await fetch("/api/anthropic",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt2}]})
+      });
       const data=await res.json();
-      const text=data.content?.map((i:any)=>i.text||"").join("")||"";
-      setAiResult(JSON.parse(text.replace(/```json|```/g,"").trim()));
+      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
+      setCustomResult(JSON.parse(text.replace(/```json|```/g,"").trim()));
     }catch(e){
-      setAiResult({headline:"Georgia jobs first — Ossoff is delivering, Collins voted no.",urgency:"high",threat:"Collins inflation ads at 900k impressions",points:[{text:"The Savannah port expansion creates 12,000 Georgia jobs — a direct result of the infrastructure bill Collins voted against.",src:"USDOT 2026 + Roll call record",w:"high",platformRef:"Georgia Ports and Infrastructure Investment"},{text:"Collins voted against the CHIPS Act that brought $4.5B in semiconductor investment to Georgia.",src:"Roll call + GA Dept of Economic Development, 2025",w:"high",platformRef:"Georgia Ports and Infrastructure Investment"}],ask:"Do not repeat his attack line. Lead with his voting record on Georgia economy.",tone:"Assertive, factual, Georgia-specific."});
+      setCustomResult({headline:"Georgia jobs first — Ossoff is delivering, Collins voted no.",points:[{text:"The Savannah port expansion creates 12,000 Georgia jobs.",src:"USDOT, 2026",w:"high"},{text:"Collins voted against the infrastructure bill that made this possible.",src:"Roll call record",w:"high"}],ask:"Lead with the voting record.",tone:"Confident, specific."});
     }
     setGenerating(false);
   };
 
-  const urgencyColor={critical:"#ef4444",high:"#f97316",medium:"#eab308"};
+  const current=agenda?agenda[sel]:null;
+  const evidenceItems=current?((current.platformIds||[]) as string[]).map((pid:string)=>INIT_PLATFORM.find((p:any)=>p.id===pid)).filter(Boolean):[];
+  const linkedNarr=current?.narrativeId?narratives.find((n:any)=>n.id===current.narrativeId):null;
+
+  const typeColor:Record<string,string>={counter:"#ef4444",amplify:"#22c55e",proactive:"#3b82f6"};
+  const typeBg:Record<string,string>={counter:"rgba(239,68,68,0.1)",amplify:"rgba(34,197,94,0.1)",proactive:"rgba(59,130,246,0.1)"};
+  const typeLabel:Record<string,string>={counter:"Counter",amplify:"Amplify",proactive:"Proactive"};
+  const urgencyColor:Record<string,string>={critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#22c55e"};
 
   return <div style={{maxWidth:720}}>
 
-    {/* Urgency banner — top negative narrative */}
-    {topNegative&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.25)",borderRadius:8,padding:"10px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"flex-start"}}>
-      <div style={{flexShrink:0,marginTop:2}}>
-        <div style={{width:8,height:8,borderRadius:"50%",background:"#ef4444"}}/>
+    {/* Threat + Opportunity summary bar */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <div style={{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,padding:"10px 12px"}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#ef4444",letterSpacing:"0.08em",marginBottom:4}}>TOP THREAT</div>
+        {topThreat
+          ?<><div style={{fontSize:12,fontWeight:600,color:"#f1f5f9",marginBottom:2}}>{topThreat.label}</div>
+            <div style={{fontSize:11,color:"#64748b"}}>Vol {topThreat.vol} · <span style={{color:"#ef4444"}}>+{topThreat.vel} velocity</span></div></>
+          :<div style={{fontSize:11,color:"#64748b"}}>No active threats</div>
+        }
       </div>
-      <div style={{flex:1}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:"0.06em",marginBottom:3}}>ACTIVE THREAT</div>
-        <div style={{fontSize:13,fontWeight:600,color:"#f1f5f9",marginBottom:4}}>{topNegative.label}</div>
-        <div style={{fontSize:11,color:"#94a3b8"}}>{topNegative.detail}</div>
+      <div style={{background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:8,padding:"10px 12px"}}>
+        <div style={{fontSize:10,fontWeight:700,color:"#22c55e",letterSpacing:"0.08em",marginBottom:4}}>TOP OPPORTUNITY</div>
+        {positives[0]
+          ?<><div style={{fontSize:12,fontWeight:600,color:"#f1f5f9",marginBottom:2}}>{positives[0].label}</div>
+            <div style={{fontSize:11,color:"#64748b"}}>Vol {positives[0].vol} · <span style={{color:"#22c55e"}}>+{positives[0].vel} velocity</span></div></>
+          :<div style={{fontSize:11,color:"#64748b"}}>No positive narratives</div>
+        }
       </div>
-      <div style={{textAlign:"center",flexShrink:0}}>
-        <div style={{fontSize:18,fontWeight:800,color:"#ef4444"}}>{"+" + topNegative.vel}</div>
-        <div style={{fontSize:9,color:"#64748b"}}>velocity</div>
-      </div>
-    </div>}
-
-    {/* Talking point selector — sorted by urgency */}
-    <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-      {sorted.map(t=>{
-        const urgent=isUrgent(t);
-        return <div key={t.id} onClick={()=>{setSel(t.id);setAiResult(null);}} style={{padding:"6px 12px",borderRadius:6,cursor:"pointer",border:"1px solid "+(sel===t.id?(urgent?"rgba(239,68,68,0.5)":"rgba(59,130,246,0.5)"):(urgent?"rgba(239,68,68,0.25)":"rgba(51,65,85,0.5)")),background:sel===t.id?(urgent?"rgba(239,68,68,0.1)":"rgba(59,130,246,0.1)"):"transparent",fontSize:12,color:sel===t.id?(urgent?"#f87171":"#3b82f6"):"#64748b",display:"flex",alignItems:"center",gap:5}}>
-          {urgent&&<span style={{fontSize:9,color:"#ef4444"}}>●</span>}
-          {t.issue}
-        </div>;
-      })}
-      <div onClick={generate} style={{padding:"6px 12px",borderRadius:6,cursor:"pointer",border:"1px solid rgba(34,197,94,0.4)",background:"rgba(34,197,94,0.08)",fontSize:12,color:"#22c55e",marginLeft:"auto"}}>{generating?"Generating...":"Generate with Polis AI"}</div>
     </div>
 
-    {/* AI generated result */}
-    {aiResult&&<Card style={{marginBottom:12,border:"1px solid rgba(34,197,94,0.3)"}}>
-      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
-        <Badge label="AI Generated" color="#22c55e" bg="rgba(34,197,94,0.1)"/>
-        {aiResult.urgency&&<Badge label={aiResult.urgency} color={(urgencyColor as any)[aiResult.urgency]||"#64748b"} bg={(urgencyColor as any)[aiResult.urgency]+"18"||"rgba(51,65,85,0.3)"}/>}
+    {/* Build agenda CTA */}
+    {!agenda&&<div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"14px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+      <div>
+        <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>Build message agenda</div>
+        <div style={{fontSize:11,color:"#64748b"}}>Polis matches your platform record against current narratives — counters for threats, amplifications for opportunities, and proactive angles from external context.</div>
       </div>
-      {aiResult.threat&&<div style={{fontSize:11,color:"#ef4444",marginBottom:8}}>Countering: {aiResult.threat}</div>}
-      <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9",marginBottom:10}}>{aiResult.headline}</div>
-      {aiResult.points?.map((pt:any,i:number)=><div key={i} style={{padding:"8px 0",borderBottom:"1px solid rgba(51,65,85,0.3)"}}>
-        <div style={{fontSize:13,color:"#cbd5e1",marginBottom:4}}>{pt.text}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <span style={{fontSize:10,color:"#475569"}}>{"📎 "+pt.src}</span>
-          <Badge label={pt.w} color={pt.w==="high"?"#22c55e":"#64748b"} bg="rgba(51,65,85,0.3)"/>
-          {pt.platformRef&&<span style={{fontSize:10,color:"#8b5cf6"}}>{"⚡ "+pt.platformRef}</span>}
-        </div>
-      </div>)}
-      {aiResult.ask&&<div style={{fontSize:12,color:"#3b82f6",marginTop:8}}>Ask: {aiResult.ask}</div>}
-    </Card>}
-
-    {/* Selected talking point */}
-    {tp&&<Card style={{marginBottom:12}}>
-      <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
-        <Badge label={tp.audience} color="#94a3b8" bg="rgba(51,65,85,0.4)"/>
-        <Badge label={tp.date} color="#475569" bg="rgba(51,65,85,0.3)"/>
-        {narr&&<Badge label={narr.sentiment==="negative"?"Countering threat":"Supporting narrative"} color={narr.sentiment==="negative"?"#ef4444":"#22c55e"} bg={narr.sentiment==="negative"?"rgba(239,68,68,0.1)":"rgba(34,197,94,0.1)"}/>}
-      </div>
-
-      {/* Linked narrative signal */}
-      {narr&&<div style={{background:"rgba(15,23,42,0.6)",borderRadius:6,padding:"8px 12px",marginBottom:12,display:"flex",gap:12,alignItems:"center"}}>
-        <div style={{width:6,height:6,borderRadius:"50%",background:narr.sentiment==="negative"?"#ef4444":narr.sentiment==="positive"?"#22c55e":"#eab308",flexShrink:0}}/>
-        <div style={{flex:1,fontSize:11,color:"#94a3b8"}}>
-          <span style={{color:"#64748b"}}>Narrative: </span>{narr.label}
-          {poll&&<span style={{color:"#64748b"}}>{" + "+poll.short}</span>}
-        </div>
-        <div style={{display:"flex",gap:10,flexShrink:0}}>
-          <div style={{textAlign:"center"}}><div style={{fontSize:13,fontWeight:700,color:"#f1f5f9"}}>{narr.vol}</div><div style={{fontSize:9,color:"#64748b"}}>vol</div></div>
-          <div style={{textAlign:"center"}}><div style={{fontSize:13,fontWeight:700,color:narr.vel>0?"#22c55e":"#ef4444"}}>{narr.vel>0?"+":""}{narr.vel}</div><div style={{fontSize:9,color:"#64748b"}}>vel</div></div>
-        </div>
-      </div>}
-
-      {/* Headline */}
-      <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9",lineHeight:1.4,marginBottom:14,padding:"12px",background:"rgba(59,130,246,0.08)",borderRadius:6,borderLeft:"3px solid #3b82f6"}}>{tp.headline}</div>
-
-      {/* Points */}
-      {tp.points.map((pt,i)=><div key={i} style={{padding:"10px 0",borderBottom:"1px solid rgba(51,65,85,0.3)"}}>
-        <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6,marginBottom:4}}>{pt.text}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <span style={{fontSize:10,color:"#475569"}}>{"📎 "+pt.src}</span>
-          <Badge label={"Impact: "+pt.w} color={pt.w==="high"?"#22c55e":"#eab308"} bg={pt.w==="high"?"rgba(34,197,94,0.1)":"rgba(234,179,8,0.1)"}/>
-        </div>
-      </div>)}
-
-      <Divider/>
-      <div style={{marginBottom:8}}><div style={{fontSize:10,color:"#475569",marginBottom:4}}>SPECIFIC ASK</div><div style={{fontSize:12,color:"#3b82f6"}}>{tp.ask}</div></div>
-      <div style={{marginBottom:0}}><div style={{fontSize:10,color:"#475569",marginBottom:4}}>TONE</div><div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>{tp.tone}</div></div>
-    </Card>}
-
-    {/* Platform evidence */}
-    {platformItems.length>0&&<div>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:"#475569",marginBottom:8}}>LEGISLATIVE EVIDENCE</div>
-      {platformItems.map((item:any,i:number)=>(
-        <div key={i} onClick={()=>setShowPlatform(showPlatform===item.id?null:item.id)} style={{background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:8,padding:"10px 14px",marginBottom:8,cursor:"pointer"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:12,fontWeight:600,color:"#e2e8f0",marginBottom:2}}>{item.title}</div>
-              <div style={{fontSize:10,color:"#64748b"}}>{item.category} · {item.updated}</div>
-            </div>
-            <Badge label={item.status} color={STATUS_COLOR[item.status]} bg={(STATUS_COLOR[item.status]||"#475569")+"18"}/>
-          </div>
-          {showPlatform===item.id&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(139,92,246,0.15)"}}>
-            <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6,marginBottom:8}}>{item.summary}</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>{"#"+t}</span>)}
-            </div>
-          </div>}
-        </div>
-      ))}
+      <div onClick={!building?buildAgenda:undefined} style={{padding:"8px 16px",borderRadius:6,cursor:building?"not-allowed":"pointer",background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",fontSize:12,color:"#3b82f6",fontWeight:600,whiteSpace:"nowrap" as const,flexShrink:0}}>{building?"Building...":"Build agenda"}</div>
     </div>}
+
+    {/* Agenda tabs + content */}
+    {agenda&&<div>
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        {agenda.map((a:any,i:number)=>(
+          <div key={i} onClick={()=>{setSel(i);setCustomResult(null);}} style={{padding:"6px 12px",borderRadius:6,cursor:"pointer",border:"1px solid "+(sel===i?(typeColor[a.type]||"#3b82f6")+"80":"rgba(51,65,85,0.5)"),background:sel===i?(typeBg[a.type]||"rgba(59,130,246,0.1)"):"transparent",fontSize:12,color:sel===i?(typeColor[a.type]||"#3b82f6"):"#64748b",display:"flex",alignItems:"center",gap:5}}>
+            {a.type==="counter"&&<span style={{width:6,height:6,borderRadius:"50%",background:"#ef4444",display:"inline-block",flexShrink:0}}/>}
+            {a.type==="amplify"&&<span style={{width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",flexShrink:0}}/>}
+            {a.type==="proactive"&&<span style={{width:6,height:6,borderRadius:"50%",background:"#3b82f6",display:"inline-block",flexShrink:0}}/>}
+            {a.angle}
+          </div>
+        ))}
+        <div onClick={buildAgenda} style={{padding:"5px 10px",borderRadius:6,cursor:"pointer",border:"1px solid rgba(51,65,85,0.4)",fontSize:11,color:"#475569",marginLeft:"auto"}}>Rebuild</div>
+      </div>
+
+      {/* Legend */}
+      <div style={{display:"flex",gap:12,marginBottom:12}}>
+        {[["counter","#ef4444","Counter threat"],["amplify","#22c55e","Amplify narrative"],["proactive","#3b82f6","Proactive"]].map(([type,color,label])=>(
+          <div key={type as string} style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:color as string,display:"inline-block"}}/>
+            <span style={{fontSize:10,color:"#475569"}}>{label as string}</span>
+          </div>
+        ))}
+      </div>
+
+      {current&&<Card style={{marginBottom:12}}>
+        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+          <Badge label={typeLabel[current.type]||current.type} color={typeColor[current.type]||"#3b82f6"} bg={typeBg[current.type]||"rgba(59,130,246,0.1)"}/>
+          <Badge label={current.audience||"General"} color="#94a3b8" bg="rgba(51,65,85,0.4)"/>
+          {current.urgency&&<Badge label={current.urgency} color={urgencyColor[current.urgency]||"#64748b"} bg={(urgencyColor[current.urgency]||"#64748b")+"18"}/>}
+        </div>
+
+        {linkedNarr&&<div style={{background:"rgba(15,23,42,0.6)",borderRadius:6,padding:"8px 12px",marginBottom:12,display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:linkedNarr.sentiment==="negative"?"#ef4444":"#22c55e",flexShrink:0}}/>
+          <div style={{flex:1,fontSize:11,color:"#94a3b8"}}>
+            <span style={{color:"#64748b"}}>Narrative: </span>{linkedNarr.label}
+          </div>
+          <div style={{display:"flex",gap:10,flexShrink:0}}>
+            <div style={{textAlign:"center"}}><div style={{fontSize:12,fontWeight:700,color:"#f1f5f9"}}>{linkedNarr.vol}</div><div style={{fontSize:9,color:"#64748b"}}>vol</div></div>
+            <div style={{textAlign:"center"}}><div style={{fontSize:12,fontWeight:700,color:linkedNarr.vel>0?"#22c55e":"#ef4444"}}>{linkedNarr.vel>0?"+":""}{linkedNarr.vel}</div><div style={{fontSize:9,color:"#64748b"}}>vel</div></div>
+          </div>
+        </div>}
+
+        <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9",lineHeight:1.4,marginBottom:14,padding:"12px",background:"rgba(59,130,246,0.08)",borderRadius:6,borderLeft:"3px solid #3b82f6"}}>{current.headline}</div>
+
+        {(current.points||[]).map((pt:any,i:number)=><div key={i} style={{padding:"10px 0",borderBottom:"1px solid rgba(51,65,85,0.3)"}}>
+          <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6,marginBottom:4}}>{pt.text}</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:10,color:"#475569"}}>{"📎 "+pt.src}</span>
+            <Badge label={"Impact: "+pt.w} color={pt.w==="high"?"#22c55e":"#eab308"} bg={pt.w==="high"?"rgba(34,197,94,0.1)":"rgba(234,179,8,0.1)"}/>
+          </div>
+        </div>)}
+
+        <Divider/>
+        <div style={{marginBottom:8}}><div style={{fontSize:10,color:"#475569",marginBottom:4}}>ASK</div><div style={{fontSize:12,color:"#3b82f6"}}>{current.ask}</div></div>
+        <div><div style={{fontSize:10,color:"#475569",marginBottom:4}}>TONE</div><div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>{current.tone}</div></div>
+      </Card>}
+
+      {evidenceItems.length>0&&<div style={{marginBottom:14}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:"#475569",marginBottom:8}}>LEGISLATIVE EVIDENCE</div>
+        {evidenceItems.map((item:any,i:number)=>(
+          <div key={i} onClick={()=>setShowEvidence(showEvidence===item.id?null:item.id)} style={{background:"rgba(139,92,246,0.06)",border:"1px solid rgba(139,92,246,0.2)",borderRadius:8,padding:"10px 14px",marginBottom:8,cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#e2e8f0",marginBottom:2}}>{item.title}</div>
+                <div style={{fontSize:10,color:"#64748b"}}>{item.category} · {item.updated} · {item.src}</div>
+              </div>
+              <Badge label={item.status} color={STATUS_COLOR[item.status]||"#475569"} bg={(STATUS_COLOR[item.status]||"#475569")+"18"}/>
+            </div>
+            {showEvidence===item.id&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(139,92,246,0.15)"}}>
+              <div style={{fontSize:11,color:"#94a3b8",lineHeight:1.6,marginBottom:8}}>{item.summary}</div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                {(Array.isArray(item.tags)?item.tags:[]).map((t:string)=><span key={t} style={{fontSize:10,color:"#475569",background:"rgba(51,65,85,0.4)",borderRadius:4,padding:"2px 6px"}}>{"#"+t}</span>)}
+              </div>
+            </div>}
+          </div>
+        ))}
+      </div>}
+    </div>}
+
+    {/* Custom situation */}
+    <div style={{borderTop:"1px solid rgba(51,65,85,0.3)",paddingTop:14,marginTop:4}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:"#475569",marginBottom:6}}>CUSTOM SITUATION</div>
+      <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>Describe a specific situation, audience, or threat. Polis generates talking points grounded in the platform record and current narratives.</div>
+      <div style={{display:"flex",gap:8}}>
+        <input
+          value={customPrompt}
+          onChange={e=>setCustomPrompt(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter")generateCustom();}}
+          placeholder='e.g. "Press gaggle about inflation in 10 minutes" or "AFL-CIO crowd, focus on jobs"'
+          style={{flex:1,background:"rgba(15,23,42,0.8)",border:"1px solid rgba(51,65,85,0.5)",borderRadius:6,padding:"7px 10px",fontSize:12,color:"#e2e8f0",outline:"none"}}
+        />
+        <div onClick={generateCustom} style={{padding:"7px 14px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",whiteSpace:"nowrap" as const,flexShrink:0}}>{generating?"Generating...":"Generate"}</div>
+      </div>
+      {customResult&&<Card style={{marginTop:12,border:"1px solid rgba(34,197,94,0.3)"}}>
+        <div style={{display:"flex",gap:6,marginBottom:8}}><Badge label="Custom · AI Generated" color="#22c55e" bg="rgba(34,197,94,0.1)"/></div>
+        <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9",marginBottom:10}}>{customResult.headline}</div>
+        {customResult.points?.map((pt:any,i:number)=><div key={i} style={{padding:"8px 0",borderBottom:"1px solid rgba(51,65,85,0.3)"}}>
+          <div style={{fontSize:13,color:"#cbd5e1",marginBottom:4}}>{pt.text}</div>
+          <div style={{display:"flex",gap:8}}>
+            <span style={{fontSize:10,color:"#475569"}}>{"📎 "+pt.src}</span>
+            <Badge label={pt.w} color={pt.w==="high"?"#22c55e":"#64748b"} bg="rgba(51,65,85,0.3)"/>
+          </div>
+        </div>)}
+        {customResult.ask&&<div style={{fontSize:12,color:"#3b82f6",marginTop:8}}>Ask: {customResult.ask}</div>}
+      </Card>}
+    </div>
 
   </div>;
 }
@@ -1193,7 +1267,7 @@ function AgentsScreen() {
 const NAV_GROUPS = [
   {id:"overview",label:"Overview",icon:"☀",screens:[{id:"brief",label:"Morning Brief",icon:"☀"}]},
   {id:"performance",label:"Performance",icon:"◈",screens:[{id:"approval",label:"Approval",icon:"◈"},{id:"opposition",label:"Opposition",icon:"⚔"},{id:"polls",label:"Polling Vault",icon:"🗳"},{id:"social",label:"Social & Media",icon:"📡"}]},
-  {id:"platform",label:"Platform",icon:"◆",screens:[{id:"narratives",label:"What They're Saying",icon:"◎"},{id:"talking",label:"What We Should Say",icon:"◆"},{id:"platform_items",label:"Our Platform",icon:"💡"},{id:"ext_context",label:"External Context",icon:"🌐"}]},
+  {id:"platform",label:"Platform",icon:"◆",screens:[{id:"ext_context",label:"External Context",icon:"🌐"},{id:"platform_items",label:"Our Platform",icon:"💡"},{id:"narratives",label:"What They're Saying",icon:"◎"},{id:"talking",label:"What We Should Say",icon:"◆"}]},
   {id:"logistics",label:"Logistics",icon:"📅",screens:[{id:"calendar",label:"Calendar & Prep",icon:"📅"},{id:"contacts",label:"Contacts & Rolodex",icon:"👥"},{id:"sources",label:"Sources",icon:"⊕"}]},
   {id:"alerts",label:"Alerts",icon:"⚡",screens:[{id:"alerts",label:"Alerts",icon:"⚡"}]},
   {id:"agents",label:"Agents",icon:"🤖",screens:[{id:"agents",label:"Polis Agents",icon:"🤖"}]},
