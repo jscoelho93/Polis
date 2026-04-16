@@ -190,7 +190,7 @@ async function extractFromFile(file: File, type: "platform"|"contact"): Promise<
 // ─── APPROVAL CHART ──────────────────────────────────────────────────────────
 
 function ApprovalChart({metric="pct"}: any) {
-  const W=520,H=160,PAD={t:12,r:12,b:28,l:36};
+  const W=520,H=200,PAD={t:24,r:24,b:32,l:40};
   const cW=W-PAD.l-PAD.r,cH=H-PAD.t-PAD.b;
   const allVals=TREND_DATA.flatMap(d=>metric==="pct"?[d.o,d.c]:[d.on,d.cn]);
   const mn=Math.floor(Math.min(...allVals)-2),mx=Math.ceil(Math.max(...allVals)+2),range=mx-mn;
@@ -306,7 +306,7 @@ function ApprovalScreen() {
   </div>;
 
   const trend=approval.trend||[];
-  const W=520,H=160,PAD={t:12,r:12,b:28,l:36};
+  const W=520,H=200,PAD={t:24,r:24,b:32,l:40};
   const cW=W-PAD.l-PAD.r,cH=H-PAD.t-PAD.b;
   const key=metric==="pct"?"ossoff_smooth":"ossoff_smooth";
   const colKey=metric==="pct"?"collins_smooth":"collins_smooth";
