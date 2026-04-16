@@ -1509,21 +1509,17 @@ function AlertsScreen() {
 
   const ack=(id:string)=>setAcknowledged(prev=>new Set([...prev,id]));
 
-  // Generate alerts from ALL live narratives — severity based on velocity
+  // Only negative/mixed narratives generate alerts
   const narrativeAlerts=narratives
-    .filter((n:any)=>n.vel!==0)
-    .sort((a:any,b:any)=>Math.abs(b.vel)-Math.abs(a.vel))
+    .filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed")
+    .sort((a:any,b:any)=>b.vel-a.vel)
     .map((n:any)=>({
       id:"n_"+n.id,
-      sev:Math.abs(n.vel)>15?"critical":Math.abs(n.vel)>7?"high":"medium",
-      title:n.sentiment==="negative"
-        ?"Negative narrative active: "+n.label
-        :n.sentiment==="positive"
-        ?"Positive narrative gaining: "+n.label
-        :"Mixed narrative: "+n.label,
-      body:n.detail+" Vol: "+n.vol+" · Velocity: "+(n.vel>0?"+":"")+n.vel,
+      sev:n.vel>15?"critical":n.vel>7?"high":"medium",
+      title:n.label,
+      body:n.detail+" · Vol: "+n.vol+" · Velocity: +"+(n.vel),
       entity:"narrative",
-      time:"Live",
+      time:"Live · from What They're Saying",
       isLive:true,
       ack:false,
     }));
@@ -1783,7 +1779,16 @@ export default function App() {
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const [sidebarApproval,setSidebarApproval]=useState<any>(null);
   const isMobile=useIsMobile();
-  const unread=ALERTS_SEED.filter(a=>!a.ack).length;
+  const getUnreadCount=()=>{
+    try{
+      const c=localStorage.getItem("polis_narratives");
+      if(c){const d=JSON.parse(c);if(d.narratives?.length){
+        return d.narratives.filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed").length;
+      }}
+    }catch(e){}
+    return ALERTS_SEED.filter((a:any)=>!a.ack).length;
+  };
+  const unread=getUnreadCount();
 
   useEffect(()=>{
     fetch("/api/approval").then(r=>r.json()).then(d=>{
