@@ -311,9 +311,9 @@ function ApprovalScreen() {
   const key=metric==="pct"?"ossoff_smooth":"ossoff_smooth";
   const colKey=metric==="pct"?"collins_smooth":"collins_smooth";
   const allVals=trend.flatMap((d:any)=>[d.ossoff_smooth,d.collins_smooth].filter(Boolean));
-  const mn=allVals.length>0?Math.floor(Math.min(...allVals)-2):30;
-  const mx=allVals.length>0?Math.ceil(Math.max(...allVals)+2):60;
-  const range=mx-mn||1;
+  const mn=0;
+  const mx=100;
+  const range=100;
   const toY=(v:number)=>cH-((v-mn)/range)*cH;
   const toX=(i:number)=>(i/(Math.max(trend.length-1,1)))*cW;
 
