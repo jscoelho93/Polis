@@ -332,14 +332,14 @@ function ApprovalScreen() {
             <div><div style={{fontSize:22,fontWeight:700,color:"#f1f5f9"}}>{x.a?x.a.toFixed(1)+"%" :"—"}</div><div style={{fontSize:10,color:"#64748b"}}>Poll avg</div></div>
             {x.n!=null&&<div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:16,fontWeight:700,color:x.n>=0?"#22c55e":"#ef4444"}}>{fmt(x.n)}</div><div style={{fontSize:10,color:"#64748b"}}>vs Collins</div></div>}
           </div>
-          {x.da!=null&&<div style={{fontSize:11,color:x.da>=0?"#22c55e":"#ef4444",marginTop:4}}>{x.da>=0?"▲":"▼"} {Math.abs(x.da).toFixed(1)}pts vs prev poll</div>}
+
         </Card>
       ))}
     </div>
 
     <Card style={{marginBottom:12}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <SL>Poll trend — last {approval.pollCount} polls</SL>
+        <SL>Poll trend — {approval.pollCount} polls · Sep 2025 – Mar 2026</SL>
         <div style={{fontSize:10,color:"#475569"}}>Latest: {approval.latestPoll?.display_name} · {approval.latestPoll?.poll_date} · {approval.pollCount} polls in signal</div>
       </div>
       <div style={{display:"flex",gap:14,marginBottom:8}}>{[["#3b82f6","Ossoff"],["#f27070","Collins"]].map(([c,l])=><span key={l as string} style={{fontSize:10,color:c as string}}>● {l as string}</span>)}</div>
