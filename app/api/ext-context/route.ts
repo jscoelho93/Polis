@@ -58,10 +58,11 @@ async function fetchFRED(seriesId: string) {
 // ─── BLS fetch ────────────────────────────────────────────────────────────────
 async function fetchBLS(seriesId: string) {
   try {
+    // Fetch 2 years to get year-over-year comparison for CPI index series
     const res = await fetch("https://api.bls.gov/publicAPI/v2/timeseries/data/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesid: [seriesId], registrationkey: BLS_KEY, startyear: "2025", endyear: "2026" }),
+      body: JSON.stringify({ seriesid: [seriesId], registrationkey: BLS_KEY, startyear: "2024", endyear: "2026" }),
     });
     const data = await res.json();
     const items: any[] = data?.Results?.series?.[0]?.data || [];
@@ -73,16 +74,39 @@ async function fetchBLS(seriesId: string) {
     });
 
     const latest = items[0];
-    const prev = items[1];
-    const val = parseFloat(latest.value);
-    const prevVal = prev ? parseFloat(prev.value) : val;
-    const diff = parseFloat((val - prevVal).toFixed(2));
-    const change = (diff >= 0 ? "+" : "") + diff.toFixed(1) + "%";
-    const trend: "up"|"down"|"flat" = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
+    const latestVal = parseFloat(latest.value);
     const mo: Record<string,string> = {M01:"Jan",M02:"Feb",M03:"Mar",M04:"Apr",M05:"May",M06:"Jun",M07:"Jul",M08:"Aug",M09:"Sep",M10:"Oct",M11:"Nov",M12:"Dec"};
     const period = (mo[latest.period] || latest.period) + " " + latest.year;
 
-    return { rawValue: val, period, change, trend };
+    // Find same month one year ago for YoY calculation
+    const prevYear = String(parseInt(latest.year) - 1);
+    const yearAgoItem = items.find((i: any) => i.year === prevYear && i.period === latest.period);
+    const yearAgoVal = yearAgoItem ? parseFloat(yearAgoItem.value) : null;
+
+    let displayVal: string;
+    let change: string;
+    let trend: "up"|"down"|"flat";
+
+    if (yearAgoVal) {
+      // Year-over-year percentage change (this is the actual inflation rate)
+      const yoyChange = ((latestVal - yearAgoVal) / yearAgoVal) * 100;
+      displayVal = yoyChange.toFixed(1) + "%";
+      // Month-over-month change for the delta
+      const prev = items[1];
+      const prevVal = prev ? parseFloat(prev.value) : latestVal;
+      const momChange = ((latestVal - prevVal) / prevVal) * 100;
+      change = (momChange >= 0 ? "+" : "") + momChange.toFixed(1) + "%";
+      trend = Math.abs(yoyChange) < 0.1 ? "flat" : yoyChange > 0 ? "up" : "down";
+      return { rawValue: yoyChange, period, change, trend, displayVal };
+    } else {
+      // Fallback: just show MoM change
+      const prev = items[1];
+      const prevVal = prev ? parseFloat(prev.value) : latestVal;
+      const diff = latestVal - prevVal;
+      change = (diff >= 0 ? "+" : "") + diff.toFixed(1);
+      trend = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
+      return { rawValue: latestVal, period, change, trend, displayVal: latestVal.toFixed(1) };
+    }
   } catch (e) {
     console.error("BLS error " + seriesId + ":", e);
     return null;
@@ -177,7 +201,7 @@ export async function GET(request: Request) {
 
   if (cpi) updates.push({
     id: "e6", label: "Inflation Rate (CPI South)",
-    val: cpi.rawValue.toFixed(1) + "%",
+    val: (cpi as any).displayVal || cpi.rawValue.toFixed(1) + "%",
     change: cpi.change, trend: cpi.trend, period: cpi.period,
     src: "BLS CPI South", is_real: true, fetched_at: now,
     note: "South region CPI. Declining trend weakens Collins inflation attack narrative.",
@@ -194,16 +218,14 @@ export async function GET(request: Request) {
   // Upsert to Supabase
   if (updates.length > 0) {
     try {
-      // Clear old rows first
-      await fetch(`${SUPABASE_URL}/rest/v1/ext_context`, {
+      // Clear ALL old rows using neq filter (Supabase requires a filter for DELETE)
+      await fetch(SUPABASE_URL + "/rest/v1/ext_context?id=neq.NONE", {
         method: "DELETE",
         headers: {
           apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
+          Authorization: "Bearer " + SUPABASE_KEY,
           Prefer: "return=minimal",
         },
-        body: JSON.stringify({}),
       });
       await supabaseUpsert("ext_context", updates);
     } catch (e) { console.error("Supabase write error:", e); }
