@@ -427,7 +427,7 @@ function OppositionScreen() {
       <Card>
         <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>Our lead over {opp.short}</div>
         <div style={{fontSize:32,fontWeight:800,color:"#22c55e"}}>{opp.lead!=null?opp.lead.toFixed(1)+"pts":"—"}</div>
-        <div style={{fontSize:10,color:"#475569",marginTop:4}}>Computed from {polls.length} polls · FiveThirtyEight</div>
+        <div style={{fontSize:10,color:"#475569",marginTop:4}}>Computed from {polls.length} public polls</div>
       </Card>
       <Card>
         <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{opp.short} poll average</div>
@@ -508,7 +508,7 @@ function PollingVaultScreen() {
       <div>
         <div style={{fontSize:11,color:"#64748b"}}>Blended signal baseline</div>
         <div style={{fontSize:32,fontWeight:800,color:"#f1f5f9"}}>{approval?.ossoff?approval.ossoff.toFixed(1)+"%":"—"}</div>
-        <div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls · Source: FiveThirtyEight</div>
+        <div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls · Emerson, AJC/UGA, Quinnipiac, AARP, Main Street</div>
       </div>
       <div style={{display:"flex",gap:8}}>
         <div onClick={()=>loadPolls(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>{fetching?"Fetching...":"⟳ Fetch live polls"}</div>
@@ -532,7 +532,7 @@ function PollingVaultScreen() {
             </div>
             <div style={{display:"flex",gap:6}}>
               <Badge label="In signal" color="#22c55e" bg="rgba(34,197,94,0.1)"/>
-              <Badge label="FiveThirtyEight" color="#3b82f6" bg="rgba(59,130,246,0.1)"/>
+              <Badge label="Public poll" color="#3b82f6" bg="rgba(59,130,246,0.1)"/>
             </div>
           </div>
           <div style={{display:"flex",gap:16,marginTop:10}}>
