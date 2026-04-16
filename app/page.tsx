@@ -343,20 +343,32 @@ function ApprovalScreen() {
         <div style={{fontSize:10,color:"#475569"}}>Latest: {approval.latestPoll?.display_name} · {approval.latestPoll?.poll_date} · {approval.pollCount} polls in signal</div>
       </div>
       <div style={{display:"flex",gap:14,marginBottom:8}}>{[["#3b82f6","Ossoff"],["#f27070","Collins"]].map(([c,l])=><span key={l as string} style={{fontSize:10,color:c as string}}>● {l as string}</span>)}</div>
-      {trend.length>1?<svg width="100%" viewBox={"0 0 "+W+" "+H}>
+      {trend.length>=1?<svg width="100%" viewBox={"0 0 "+W+" "+H}>
         <g transform={"translate("+PAD.l+","+PAD.t+")"}>
           {[mn,Math.round(mn+range/2),mx].map((v:number)=><g key={v}>
             <line x1={0} y1={toY(v)} x2={cW} y2={toY(v)} stroke="rgba(51,65,85,0.3)" strokeDasharray="3,4"/>
             <text x={-6} y={toY(v)+4} textAnchor="end" fontSize={9} fill="#475569">{v}%</text>
           </g>)}
-          {(["ossoff_smooth","collins_smooth"] as const).map((k,ki)=>{
+          {(["ossoff","collins"] as const).map((k,ki)=>{
             const color=ki===0?"#3b82f6":"#f27070";
-            const pts=trend.filter((d:any)=>d[k]!=null).map((d:any,i:number)=>toX(trend.indexOf(d))+","+toY(d[k])).join(" ");
-            return pts?<polyline key={k} points={pts} fill="none" stroke={color} strokeWidth={ki===0?2:1.5}/>:null;
+            const validPts=trend.map((d:any,i:number)=>({v:d[k],i})).filter((p:any)=>p.v!=null);
+            if(validPts.length===0)return null;
+            if(validPts.length===1){
+              const p=validPts[0];
+              return <circle key={k} cx={toX(p.i)} cy={toY(p.v)} r={4} fill={color}/>;
+            }
+            const pts=validPts.map((p:any)=>toX(p.i)+","+toY(p.v)).join(" ");
+            return <polyline key={k} points={pts} fill="none" stroke={color} strokeWidth={ki===0?2:1.5}/>;
           })}
-          {trend.map((d:any,i:number)=><text key={i} x={toX(i)} y={cH+16} textAnchor="middle" fontSize={8} fill="#475569">{d.date?.slice(5)}</text>)}
+          {trend.map((d:any,i:number)=>(
+            <g key={i}>
+              <text x={toX(i)} y={cH+16} textAnchor="middle" fontSize={8} fill="#475569">{d.date?.slice(0,7)}</text>
+              {d.ossoff&&<circle cx={toX(i)} cy={toY(d.ossoff)} r={3} fill="#3b82f6"/>}
+              {d.collins&&<circle cx={toX(i)} cy={toY(d.collins)} r={3} fill="#f27070"/>}
+            </g>
+          ))}
         </g>
-      </svg>:<div style={{padding:20,textAlign:"center",color:"#475569",fontSize:12}}>Not enough poll data for trend. Fetch polls to populate.</div>}
+      </svg>:<div style={{padding:20,textAlign:"center",color:"#475569",fontSize:12}}>No poll data. Click Fetch live polls in Polling Vault.</div>}
     </Card>
 
     <Card>
@@ -595,7 +607,7 @@ function SocialMediaScreen() {
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
       <div style={{fontSize:11,color:"#64748b"}}>
-        {"Last known values · " + (fetchedAt?new Date(fetchedAt).toLocaleDateString():"not yet loaded") + " · Platform APIs require paid access"}
+  {stats.some((s:any)=>s.is_live)?"Twitter live via syndication API · Instagram: approximate from public sources · ":"Approximate values from public sources · "}{fetchedAt?new Date(fetchedAt).toLocaleString():""}
       </div>
       <div onClick={()=>loadStats(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600}}>
         {fetching?"Fetching...":"⟳ Refresh"}
@@ -621,7 +633,10 @@ function SocialMediaScreen() {
             const s=byPlatform(c.id,p);
             return <div key={p} style={{textAlign:"center"}}>
               <div style={{fontSize:14,fontWeight:700,color:c.color}}>{fmt(s?.followers||null)}</div>
-              {s?.source_url&&<a href={s.source_url} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:"#3b82f6",textDecoration:"none"}}>↗ profile</a>}
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                {s?.source_url&&<a href={s.source_url} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:"#3b82f6",textDecoration:"none"}}>↗ profile</a>}
+                {s&&<span style={{fontSize:8,color:s.is_live?"#22c55e":"#f97316"}}>{s.is_live?"LIVE":"~"}</span>}
+              </div>
             </div>;
           })}
         </div>
