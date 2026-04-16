@@ -1525,8 +1525,13 @@ function AlertsScreen() {
       isLive:true,
     }));
 
-  const allAlerts=[...narrativeAlerts,...ALERTS_SEED.filter((a:any)=>!narrativeAlerts.find((na:any)=>na.id===a.id))];
-  const unacked=allAlerts.filter((a:any)=>!acknowledged.has(a.id)&&!a.ack);
+  // If live narratives are loaded, use only narrative-based alerts
+  // Only fall back to seed if no live narratives fetched yet
+  const hasLive=narratives!==NARRATIVES_SEED&&narratives.length>0;
+  const allAlerts=hasLive
+    ?narrativeAlerts
+    :[...narrativeAlerts,...ALERTS_SEED];
+  const unacked=allAlerts.filter((a:any)=>!acknowledged.has(a.id)&&!(a as any).ack);
 
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",gap:10,marginBottom:14}}>
