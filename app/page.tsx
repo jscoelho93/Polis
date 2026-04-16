@@ -368,9 +368,7 @@ function ApprovalScreen() {
   const key=metric==="pct"?"ossoff_smooth":"ossoff_smooth";
   const colKey=metric==="pct"?"collins_smooth":"collins_smooth";
   const allVals=trend.flatMap((d:any)=>[d.ossoff_smooth,d.collins_smooth].filter(Boolean));
-  const mn=allVals.length>0?Math.floor(Math.min(...allVals)-2):30;
-  const mx=allVals.length>0?Math.ceil(Math.max(...allVals)+2):60;
-  const range=mx-mn||1;
+  const mn=0,mx=100,range=100;
   const toY=(v:number)=>cH-((v-mn)/range)*cH;
   const toX=(i:number)=>(i/(Math.max(trend.length-1,1)))*cW;
 
@@ -1321,6 +1319,9 @@ function CalendarScreen() {
   const [sel,setSel]=useState<string|null>(null);
   const [generating,setGenerating]=useState<string|null>(null);
   const [generatedBriefs,setGeneratedBriefs]=useState<Record<string,any>>({});
+  const [events,setEvents]=useState(CALENDAR);
+  const [showNew,setShowNew]=useState(false);
+  const [newEvent,setNewEvent]=useState({title:"",type:"interview",date:"",time:"",loc:"",urgency:"medium"});
   const URG: Record<string,string>={critical:"#ef4444",high:"#f97316",medium:"#eab308",low:"#22c55e"};
   const genBrief=async(ev:any)=>{
     setGenerating(ev.id);
@@ -1332,7 +1333,25 @@ function CalendarScreen() {
   };
   const getBrief=(ev:any)=>generatedBriefs[ev.id]||ev.brief;
   return <div style={{maxWidth:720}}>
-    {CALENDAR.map(ev=>(
+    <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+      <div onClick={()=>setShowNew(true)} style={{padding:"6px 14px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e"}}>+ Add event</div>
+    </div>
+    {showNew&&<Card style={{marginBottom:12,border:"1px solid rgba(34,197,94,0.3)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><SL>New event</SL><div onClick={()=>setShowNew(false)} style={{fontSize:11,color:"#64748b",cursor:"pointer"}}>x</div></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+        <FieldInput value={newEvent.title} onChange={(v:string)=>setNewEvent(p=>({...p,title:v}))} placeholder="Event title *"/>
+        <FieldInput value={newEvent.date} onChange={(v:string)=>setNewEvent(p=>({...p,date:v}))} placeholder="Date (e.g. Apr 20)"/>
+        <FieldInput value={newEvent.time} onChange={(v:string)=>setNewEvent(p=>({...p,time:v}))} placeholder="Time (e.g. 9:00 AM)"/>
+        <FieldInput value={newEvent.loc} onChange={(v:string)=>setNewEvent(p=>({...p,loc:v}))} placeholder="Location"/>
+        <FieldSelect value={newEvent.type} onChange={(v:string)=>setNewEvent(p=>({...p,type:v}))}><option value="interview">Interview</option><option value="debate">Debate</option><option value="town_hall">Town Hall</option><option value="meeting">Meeting</option><option value="fundraiser">Fundraiser</option><option value="press_avail">Press Avail</option><option value="other">Other</option></FieldSelect>
+        <FieldSelect value={newEvent.urgency} onChange={(v:string)=>setNewEvent(p=>({...p,urgency:v}))}><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></FieldSelect>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <div onClick={()=>{if(!newEvent.title)return;setEvents((prev:any)=>[...prev,{...newEvent,id:"ev"+Date.now(),prep:"unbriefed",brief:null}]);setShowNew(false);setNewEvent({title:"",type:"interview",date:"",time:"",loc:"",urgency:"medium"});}} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
+        <div onClick={()=>setShowNew(false)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
+      </div>
+    </Card>}
+    {events.map(ev=>(
       <Card key={ev.id} style={{marginBottom:8,borderLeft:`3px solid ${URG[ev.urgency]||"#475569"}`}}>
         <div onClick={()=>setSel(sel===ev.id?null:ev.id)} style={{cursor:"pointer"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -1442,25 +1461,72 @@ function ContactsScreen() {
 }
 
 function AlertsScreen() {
-  const [alerts,setAlerts]=useState(ALERTS_SEED);
-  const ack=(id:string)=>setAlerts(prev=>prev.map(a=>a.id===id?{...a,ack:true}:a));
+  const getLiveNarratives=()=>{
+    try{const c=sessionStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
+    return NARRATIVES_SEED;
+  };
+  const [narratives,setNarratives]=useState<any[]>(getLiveNarratives);
+  const [acknowledged,setAcknowledged]=useState<Set<string>>(new Set());
+
+  useEffect(()=>{
+    const interval=setInterval(()=>setNarratives(getLiveNarratives()),5000);
+    return ()=>clearInterval(interval);
+  },[]);
+
+  const ack=(id:string)=>setAcknowledged(prev=>new Set([...prev,id]));
+
+  // Generate alerts from live narratives + hardcoded structural alerts
+  const narrativeAlerts=narratives
+    .filter((n:any)=>n.vel>10||n.vel<-5)
+    .sort((a:any,b:any)=>Math.abs(b.vel)-Math.abs(a.vel))
+    .map((n:any)=>({
+      id:"n_"+n.id,
+      sev:n.vel>20?"critical":n.vel>10?"high":"medium",
+      title:n.sentiment==="negative"
+        ?"Negative narrative surging: "+n.label
+        :"Positive narrative gaining: "+n.label,
+      body:n.detail+" Vol: "+n.vol+" · Velocity: "+(n.vel>0?"+":"")+n.vel,
+      entity:"narrative",
+      time:"Live",
+      isLive:true,
+    }));
+
+  const allAlerts=[...narrativeAlerts,...ALERTS_SEED.filter((a:any)=>!narrativeAlerts.find((na:any)=>na.id===a.id))];
+  const unacked=allAlerts.filter((a:any)=>!acknowledged.has(a.id)&&!a.ack);
+
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",gap:10,marginBottom:14}}>
-      {["critical","high","medium"].map(s=>{const cnt=alerts.filter(a=>a.sev===s&&!a.ack).length;return <Card key={s} style={{flex:1,textAlign:"center"}}><div style={{fontSize:22,fontWeight:800,color:SEV_COLOR[s]}}>{cnt}</div><div style={{fontSize:10,color:"#64748b",textTransform:"uppercase" as const}}>{s} unread</div></Card>;})}
+      {["critical","high","medium"].map(s=>{
+        const cnt=unacked.filter((a:any)=>a.sev===s).length;
+        return <Card key={s} style={{flex:1,textAlign:"center"}}>
+          <div style={{fontSize:22,fontWeight:800,color:SEV_COLOR[s]}}>{cnt}</div>
+          <div style={{fontSize:10,color:"#64748b",textTransform:"uppercase" as const}}>{s} unread</div>
+        </Card>;
+      })}
     </div>
-    {alerts.map(a=>(
-      <Card key={a.id} style={{marginBottom:8,opacity:a.ack?0.5:1,borderLeft:`3px solid ${SEV_COLOR[a.sev]}`,background:a.ack?"rgba(15,23,42,0.4)":SEV_BG[a.sev]}}>
+    <div style={{fontSize:11,color:"#475569",marginBottom:10}}>
+      {narrativeAlerts.length>0
+        ?"Alerts generated from live narratives + signal data"
+        :"Fetch live narratives to generate real-time alerts"}
+    </div>
+    {allAlerts.map((a:any)=>{
+      const isAcked=acknowledged.has(a.id)||a.ack;
+      return <Card key={a.id} style={{marginBottom:8,opacity:isAcked?0.5:1,borderLeft:"3px solid "+SEV_COLOR[a.sev],background:isAcked?"rgba(15,23,42,0.4)":SEV_BG[a.sev]}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div style={{flex:1,paddingRight:10}}>
-            <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}><Badge label={a.sev} color={SEV_COLOR[a.sev]} bg={`${SEV_COLOR[a.sev]}18`}/><span style={{fontSize:10,color:"#475569"}}>{a.time}</span>{a.ack&&<span style={{fontSize:10,color:"#475569"}}>· Acknowledged</span>}</div>
+            <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
+              <Badge label={a.sev} color={SEV_COLOR[a.sev]} bg={SEV_COLOR[a.sev]+"18"}/>
+              <span style={{fontSize:10,color:"#475569"}}>{a.time}</span>
+              {a.isLive&&<Badge label="LIVE" color="#22c55e" bg="rgba(34,197,94,0.1)"/>}
+              {isAcked&&<span style={{fontSize:10,color:"#475569"}}>· Acknowledged</span>}
+            </div>
             <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0",marginBottom:4}}>{a.title}</div>
             <div style={{fontSize:12,color:"#94a3b8"}}>{a.body}</div>
-            {a.sev==="critical"&&!a.ack&&<div style={{fontSize:11,color:"#3b82f6",marginTop:6,cursor:"pointer"}}>Generate rapid response talking points</div>}
           </div>
-          {!a.ack&&<div onClick={()=>ack(a.id)} style={{fontSize:10,color:"#475569",cursor:"pointer",padding:"4px 8px",border:"1px solid rgba(51,65,85,0.5)",borderRadius:4,whiteSpace:"nowrap" as const,marginTop:4}}>Acknowledge</div>}
+          {!isAcked&&<div onClick={()=>ack(a.id)} style={{fontSize:10,color:"#475569",cursor:"pointer",padding:"4px 8px",border:"1px solid rgba(51,65,85,0.5)",borderRadius:4,whiteSpace:"nowrap" as const,marginTop:4}}>Acknowledge</div>}
         </div>
-      </Card>
-    ))}
+      </Card>;
+    })}
   </div>;
 }
 
@@ -1653,7 +1719,7 @@ const NAV_GROUPS = [
   {id:"overview",label:"Overview",icon:"☀",screens:[{id:"brief",label:"Morning Brief",icon:"☀"}]},
   {id:"performance",label:"Performance",icon:"◈",screens:[{id:"approval",label:"Approval",icon:"◈"},{id:"opposition",label:"Opposition",icon:"⚔"},{id:"polls",label:"Polling Vault",icon:"🗳"},{id:"social",label:"Social & Media",icon:"📡"}]},
   {id:"platform",label:"Platform",icon:"◆",screens:[{id:"ext_context",label:"External Context",icon:"🌐"},{id:"platform_items",label:"Our Platform",icon:"💡"},{id:"narratives",label:"What They're Saying",icon:"◎"},{id:"talking",label:"What We Should Say",icon:"◆"}]},
-  {id:"logistics",label:"Logistics",icon:"📅",screens:[{id:"calendar",label:"Calendar & Prep",icon:"📅"},{id:"contacts",label:"Contacts & Rolodex",icon:"👥"},{id:"sources",label:"Sources",icon:"⊕"}]},
+  {id:"logistics",label:"Logistics",icon:"📅",screens:[{id:"calendar",label:"Calendar & Prep",icon:"📅"},{id:"contacts",label:"Contacts & Rolodex",icon:"👥"}]},
   {id:"alerts",label:"Alerts",icon:"⚡",screens:[{id:"alerts",label:"Alerts",icon:"⚡"}]},
   {id:"agents",label:"Agents",icon:"🤖",screens:[{id:"agents",label:"Polis Agents",icon:"🤖"}]},
 ];
@@ -1674,8 +1740,15 @@ export default function App() {
   const [screen,setScreen]=useState("brief");
   const [openGroups,setOpenGroups]=useState<Record<string,boolean>>({overview:true,performance:true,platform:false,logistics:false,alerts:false,agents:false});
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
+  const [sidebarApproval,setSidebarApproval]=useState<any>(null);
   const isMobile=useIsMobile();
   const unread=ALERTS_SEED.filter(a=>!a.ack).length;
+
+  useEffect(()=>{
+    fetch("/api/approval").then(r=>r.json()).then(d=>{
+      if(d.ossoff&&d.lead)setSidebarApproval(d);
+    }).catch(()=>{});
+  },[]);
   const toggleGroup=(id:string)=>setOpenGroups(p=>({...p,[id]:!p[id]}));
 
   const renderScreen=()=>{
@@ -1771,9 +1844,9 @@ export default function App() {
           <div style={{fontSize:12,fontWeight:700,color:"#f1f5f9"}}>Jon Ossoff</div>
           <div style={{fontSize:10,color:"#64748b"}}>D · Georgia Senate 2026</div>
           <div style={{display:"flex",gap:10,marginTop:6}}>
-            <div><div style={{fontSize:18,fontWeight:800,color:"#3b82f6"}}>47.8%</div><div style={{fontSize:8,color:"#475569"}}>Approval</div></div>
-            <div><div style={{fontSize:18,fontWeight:800,color:"#22c55e"}}>+3.7</div><div style={{fontSize:8,color:"#475569"}}>Net</div></div>
-            <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:18,fontWeight:800,color:"#22c55e"}}>+8.6</div><div style={{fontSize:8,color:"#475569"}}>vs Collins</div></div>
+            <div><div style={{fontSize:18,fontWeight:800,color:"#3b82f6"}}>{sidebarApproval?sidebarApproval.ossoff.toFixed(1)+"%":"47.8%"}</div><div style={{fontSize:8,color:"#475569"}}>Approval</div></div>
+            <div><div style={{fontSize:18,fontWeight:800,color:"#22c55e"}}>{sidebarApproval?"+"+sidebarApproval.lead.toFixed(1):"+3.7"}</div><div style={{fontSize:8,color:"#475569"}}>vs Collins</div></div>
+            <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:18,fontWeight:800,color:"#22c55e"}}>{sidebarApproval?sidebarApproval.ossoff.toFixed(1)+"%":"47.8%"}</div><div style={{fontSize:8,color:"#475569"}}>Poll avg</div></div>
           </div>
         </div>
         <nav style={{flex:1,padding:"6px",overflowY:"auto" as const}}>
