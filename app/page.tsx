@@ -1510,12 +1510,13 @@ function AlertsScreen() {
   const ack=(id:string)=>setAcknowledged(prev=>new Set([...prev,id]));
 
   // Only negative/mixed narratives generate alerts
+  // Severity matches sentiment color from What They're Saying
   const narrativeAlerts=narratives
     .filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed")
     .sort((a:any,b:any)=>b.vel-a.vel)
     .map((n:any)=>({
       id:"n_"+n.id,
-      sev:n.vel>15?"critical":n.vel>7?"high":"medium",
+      sev:n.sentiment==="negative"?"high":"medium",
       title:n.label,
       body:n.detail+" · Vol: "+n.vol+" · Velocity: +"+(n.vel),
       entity:"narrative",
