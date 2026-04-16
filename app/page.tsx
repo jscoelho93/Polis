@@ -340,7 +340,7 @@ function ApprovalScreen() {
     <Card style={{marginBottom:12}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <SL>Poll trend — last {approval.pollCount} polls</SL>
-        <div style={{fontSize:10,color:"#475569"}}>Source: FiveThirtyEight · {approval.latestPoll?.display_name} {approval.latestPoll?.poll_date}</div>
+        <div style={{fontSize:10,color:"#475569"}}>Latest: {approval.latestPoll?.display_name} · {approval.latestPoll?.poll_date} · {approval.pollCount} polls in signal</div>
       </div>
       <div style={{display:"flex",gap:14,marginBottom:8}}>{[["#3b82f6","Ossoff"],["#f27070","Collins"]].map(([c,l])=><span key={l as string} style={{fontSize:10,color:c as string}}>● {l as string}</span>)}</div>
       {trend.length>1?<svg width="100%" viewBox={"0 0 "+W+" "+H}>
@@ -508,7 +508,7 @@ function PollingVaultScreen() {
       <div>
         <div style={{fontSize:11,color:"#64748b"}}>Blended signal baseline</div>
         <div style={{fontSize:32,fontWeight:800,color:"#f1f5f9"}}>{approval?.ossoff?approval.ossoff.toFixed(1)+"%":"—"}</div>
-        <div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls · Emerson, AJC/UGA, Quinnipiac, AARP, Main Street</div>
+        <div style={{fontSize:11,color:"#64748b"}}>{polls.length} polls in signal</div>
       </div>
       <div style={{display:"flex",gap:8}}>
         <div onClick={()=>loadPolls(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>{fetching?"Fetching...":"⟳ Fetch live polls"}</div>
@@ -595,7 +595,7 @@ function SocialMediaScreen() {
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
       <div style={{fontSize:11,color:"#64748b"}}>
-        {fetchedAt?(source==="cache"?"Cached · ":"Live · ")+new Date(fetchedAt).toLocaleString():"Seed data · not yet refreshed"}
+        {"Last known values · " + (fetchedAt?new Date(fetchedAt).toLocaleDateString():"not yet loaded") + " · Platform APIs require paid access"}
       </div>
       <div onClick={()=>loadStats(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600}}>
         {fetching?"Fetching...":"⟳ Refresh"}
@@ -627,8 +627,8 @@ function SocialMediaScreen() {
         </div>
       ))}
       <div style={{marginTop:8,fontSize:10,color:"#334155"}}>
-        {source==="cache"?"Cached data":"Scraped from public profiles"} · {fetchedAt?new Date(fetchedAt).toLocaleDateString():""}
-        {stats.some((s:any)=>!s.followers)&&<span style={{color:"#f97316"}}> · Some profiles could not be scraped — showing last known values</span>}
+        Not live · Twitter/Instagram require paid API access
+        <span style={{color:"#f97316"}}> · Not live — platform APIs require paid access</span>
       </div>
     </Card>
 
