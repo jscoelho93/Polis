@@ -62,7 +62,7 @@ async function fetchBLS(seriesId: string) {
     const res = await fetch("https://api.bls.gov/publicAPI/v2/timeseries/data/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesid: [seriesId], registrationkey: BLS_KEY, startyear: "2024", endyear: "2026" }),
+      body: JSON.stringify({ seriesid: [seriesId], registrationkey: BLS_KEY, startyear: "2023", endyear: "2026" }),
     });
     const data = await res.json();
     const items: any[] = data?.Results?.series?.[0]?.data || [];
@@ -115,10 +115,10 @@ async function fetchBLS(seriesId: string) {
 
 const SOURCE_URLS: Record<string,string> = {
   e1: "https://fred.stlouisfed.org/series/GAUR",
-  e2: "https://fred.stlouisfed.org/series/GANAG",
+  e2: "https://fred.stlouisfed.org/series/GANA",
   e3: "https://fred.stlouisfed.org/series/GABPPRIV",
   e4: "https://fred.stlouisfed.org/series/GAICLAIMS",
-  e5: "https://fred.stlouisfed.org/series/GAAVGWK",
+  e5: "https://fred.stlouisfed.org/series/SMU13000000500000011",
   e6: "https://www.bls.gov/regions/southeast/news-release/consumerpriceindex_south.htm",
   e7: "https://fred.stlouisfed.org/series/MORTGAGE30US",
 };
@@ -149,10 +149,10 @@ export async function GET(request: Request) {
   const now = new Date().toISOString();
   const [unemployment, nonfarm, permits, claims, wages, cpi, mortgage] = await Promise.all([
     fetchFRED("GAUR"),
-    fetchFRED("GANAG"),
+    fetchFRED("GANA"),
     fetchFRED("GABPPRIV"),
     fetchFRED("GAICLAIMS"),
-    fetchFRED("GAAVGWK"),
+    fetchFRED("SMU13000000500000011"),
     fetchBLS("CUURS35ASA0"),
     fetchFRED("MORTGAGE30US"),
   ]);
@@ -192,11 +192,11 @@ export async function GET(request: Request) {
   });
 
   if (wages) updates.push({
-    id: "e5", label: "GA Avg Weekly Wage",
-    val: "$" + Math.round(wages.rawValue).toLocaleString(),
+    id: "e5", label: "GA Avg Hourly Earnings",
+    val: "$" + wages.rawValue.toFixed(2),
     change: wages.change, trend: wages.trend, period: wages.period,
     src: "FRED / BLS QCEW", is_real: true, fetched_at: now,
-    note: "Average weekly wages all industries. Use in cost-of-living contrast messaging.",
+    note: "Average hourly earnings, total private. Use in cost-of-living and wage growth messaging.",
   });
 
   if (cpi) updates.push({
@@ -218,8 +218,8 @@ export async function GET(request: Request) {
   // Upsert to Supabase
   if (updates.length > 0) {
     try {
-      // Clear ALL old rows using neq filter (Supabase requires a filter for DELETE)
-      await fetch(SUPABASE_URL + "/rest/v1/ext_context?id=neq.NONE", {
+      // Delete all rows - using id filter that matches all valid ids
+      await fetch(SUPABASE_URL + "/rest/v1/ext_context?id=in.(e1,e2,e3,e4,e5,e6,e7,e8,e9)", {
         method: "DELETE",
         headers: {
           apikey: SUPABASE_KEY,
