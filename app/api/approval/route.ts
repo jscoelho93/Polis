@@ -19,14 +19,14 @@ export async function GET() {
       return NextResponse.json({ error: "No polls available", approval: null });
     }
 
-    // Use last 90 days of polls
+    // Use all available polls for trend (up to last 365 days)
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 90);
+    cutoff.setDate(cutoff.getDate() - 365);
     const recent = polls.filter((p: any) =>
       p.ossoff_pct && new Date(p.poll_date) >= cutoff
     );
 
-    const pool = recent.length > 0 ? recent : polls.slice(0, 5);
+    const pool = recent.length > 0 ? recent : polls.filter((p:any)=>p.ossoff_pct);
 
     // Weight by recency and sample size
     let totalWeight = 0;
