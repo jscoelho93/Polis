@@ -944,7 +944,7 @@ function PlatformScreen() {
 }
 
 function ExternalContextScreen() {
-  const [metrics,setMetrics]=useState<any[]>(EXT_CONTEXT);
+  const [metrics,setMetrics]=useState<any[]>([]);
   const [refreshing,setRefreshing]=useState(false);
   const [fetchedAt,setFetchedAt]=useState<string|null>(null);
   const [source,setSource]=useState<string|null>(null);
@@ -964,7 +964,7 @@ function ExternalContextScreen() {
         setSource(data.source||null);
       }
     }catch(e){
-      setError("Could not load live data. Showing seed values.");
+      setError("Could not load live data.");
     }
     setRefreshing(false);
   };
@@ -977,7 +977,7 @@ function ExternalContextScreen() {
       <div style={{fontSize:11,color:"#64748b"}}>
         {fetchedAt
           ?(source==="cache"?"Cached · ":"Live · ")+new Date(fetchedAt).toLocaleString()
-          :"Seed data · loading..."}
+          :refreshing?"Loading real data...":""}
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center"}}>
         {error&&<span style={{fontSize:11,color:"#f97316"}}>{error}</span>}
@@ -986,29 +986,33 @@ function ExternalContextScreen() {
         </div>
       </div>
     </div>
-    {error&&<div style={{background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fdba74"}}>{error}</div>}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+
+    {metrics.length===0&&!refreshing&&<div style={{textAlign:"center",padding:"40px 0",color:"#475569",fontSize:13}}>Loading economic data...</div>}
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:10}}>
       {metrics.map((m:any,i:number)=>(
-        <div key={m.id||i} style={{background:"rgba(15,23,42,0.7)",border:"1px solid rgba(51,65,85,0.5)",borderRadius:10,padding:16,borderTop:"2px solid "+(trendColors[m.trend]||"#94a3b8")}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <div style={{fontSize:11,color:"#64748b",flex:1,paddingRight:8}}>{m.label}</div>
-            <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-end",gap:2}}>
+        <div key={m.id||i} style={{background:"rgba(15,23,42,0.7)",border:"1px solid rgba(51,65,85,0.5)",borderRadius:10,padding:16,borderTop:"2px solid "+(trendColors[m.trend]||"#94a3b8"),display:"flex",flexDirection:"column" as const,gap:4}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{fontSize:11,color:"#64748b",flex:1,paddingRight:8,lineHeight:1.4}}>{m.label}</div>
+            <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-end",gap:2,flexShrink:0}}>
               <div style={{fontSize:10,color:"#475569"}}>{m.period}</div>
-              {m.is_real&&<div style={{fontSize:9,fontWeight:700,color:"#22c55e",letterSpacing:"0.04em"}}>LIVE</div>}
+              {m.is_real&&<div style={{fontSize:9,fontWeight:700,color:"#22c55e",letterSpacing:"0.06em",background:"rgba(34,197,94,0.1)",borderRadius:3,padding:"1px 4px"}}>LIVE</div>}
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
-            <div style={{fontSize:20,fontWeight:800,color:"#f1f5f9"}}>{m.val}</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+            <div style={{fontSize:22,fontWeight:800,color:"#f1f5f9"}}>{m.val}</div>
             <div style={{fontSize:11,fontWeight:600,color:trendColors[m.trend]||"#94a3b8"}}>{(trends[m.trend]||"→")+" "+m.change}</div>
           </div>
-          <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{m.src}</div>
-          <div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>{m.note}</div>
+          <div style={{fontSize:10,color:"#475569"}}>
+            {m.sourceUrl
+              ?<a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" style={{color:"#3b82f6",textDecoration:"none"}}>{"↗ "+m.src}</a>
+              :m.src}
+          </div>
+          <div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic",lineHeight:1.5}}>{m.note}</div>
         </div>
       ))}
     </div>
-    <div style={{marginTop:12,fontSize:10,color:"#334155"}}>
-      Real data: BLS (unemployment, CPI) · BEA (GDP) · Census ACS (income) · Other metrics: seed data
-    </div>
+    <div style={{marginTop:10,fontSize:10,color:"#1e293b"}}>All metrics sourced from FRED (Federal Reserve Economic Data), BLS, and Census. Updated daily.</div>
   </div>;
 }
 

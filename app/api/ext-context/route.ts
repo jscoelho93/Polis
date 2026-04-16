@@ -1,245 +1,222 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
 
 const BLS_KEY = process.env.BLS_API_KEY!;
-const BEA_KEY = process.env.BEA_API_KEY!;
-const CENSUS_KEY = process.env.CENSUS_API_KEY!;
+const FRED_KEY = process.env.FRED_API_KEY!;
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
 
-// BLS series IDs
-const BLS_SERIES = {
-  GA_UNEMPLOYMENT: "LASST130000000000003", // Georgia unemployment rate, seasonally adjusted
-  CPI_SOUTH: "CUURS35ASA0",               // CPI All Urban Consumers South region
-};
+// ─── Supabase REST ────────────────────────────────────────────────────────────
+async function supabaseSelect(table: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id.asc`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+  });
+  if (!res.ok) throw new Error(`Supabase select failed: ${res.status}`);
+  return res.json();
+}
+
+async function supabaseUpsert(table: string, rows: any[]) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) throw new Error(`Supabase upsert failed: ${res.status} ${await res.text()}`);
+}
+
+// ─── FRED fetch ───────────────────────────────────────────────────────────────
+async function fetchFRED(seriesId: string) {
+  try {
+    const url = "https://api.stlouisfed.org/fred/series/observations?series_id=" + seriesId + "&api_key=" + FRED_KEY + "&file_type=json&sort_order=desc&limit=13";
+    const res = await fetch(url);
+    const data = await res.json();
+    const obs: any[] = (data.observations || []).filter((o: any) => o.value !== ".");
+    if (obs.length === 0) return null;
+
+    const latest = obs[0];
+    const prev = obs[1];
+    const val = parseFloat(latest.value);
+    const prevVal = prev ? parseFloat(prev.value) : val;
+    const pctChange = prevVal !== 0 ? ((val - prevVal) / Math.abs(prevVal)) * 100 : 0;
+    const trend: "up"|"down"|"flat" = Math.abs(pctChange) < 0.5 ? "flat" : pctChange > 0 ? "up" : "down";
+    const d = new Date(latest.date);
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const period = months[d.getMonth()] + " " + d.getFullYear();
+    const change = (pctChange >= 0 ? "+" : "") + pctChange.toFixed(1) + "%";
+
+    return { rawValue: val, period, change, trend };
+  } catch (e) {
+    console.error("FRED error " + seriesId + ":", e);
+    return null;
+  }
+}
 
 // ─── BLS fetch ────────────────────────────────────────────────────────────────
-async function fetchBLS(seriesId: string): Promise<{ value: string; period: string; change: string; trend: "up"|"down"|"flat" } | null> {
+async function fetchBLS(seriesId: string) {
   try {
     const res = await fetch("https://api.bls.gov/publicAPI/v2/timeseries/data/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        seriesid: [seriesId],
-        registrationkey: BLS_KEY,
-        startyear: "2025",
-        endyear: "2026",
-        latest: true,
-      }),
+      body: JSON.stringify({ seriesid: [seriesId], registrationkey: BLS_KEY, startyear: "2025", endyear: "2026" }),
     });
     const data = await res.json();
-    const series = data?.Results?.series?.[0];
-    const items: any[] = series?.data || [];
+    const items: any[] = data?.Results?.series?.[0]?.data || [];
     if (items.length === 0) return null;
 
-    // Sort by year desc, period desc to get most recent
-    items.sort((a, b) => {
+    items.sort((a: any, b: any) => {
       if (b.year !== a.year) return parseInt(b.year) - parseInt(a.year);
-      return parseInt(b.period.replace("M", "")) - parseInt(a.period.replace("M", ""));
+      return parseInt(b.period.replace("M","")) - parseInt(a.period.replace("M",""));
     });
 
     const latest = items[0];
     const prev = items[1];
     const val = parseFloat(latest.value);
     const prevVal = prev ? parseFloat(prev.value) : val;
-    const diff = val - prevVal;
+    const diff = parseFloat((val - prevVal).toFixed(2));
     const change = (diff >= 0 ? "+" : "") + diff.toFixed(1) + "%";
     const trend: "up"|"down"|"flat" = Math.abs(diff) < 0.05 ? "flat" : diff > 0 ? "up" : "down";
+    const mo: Record<string,string> = {M01:"Jan",M02:"Feb",M03:"Mar",M04:"Apr",M05:"May",M06:"Jun",M07:"Jul",M08:"Aug",M09:"Sep",M10:"Oct",M11:"Nov",M12:"Dec"};
+    const period = (mo[latest.period] || latest.period) + " " + latest.year;
 
-    const monthNames: Record<string,string> = {
-      M01:"Jan",M02:"Feb",M03:"Mar",M04:"Apr",M05:"May",M06:"Jun",
-      M07:"Jul",M08:"Aug",M09:"Sep",M10:"Oct",M11:"Nov",M12:"Dec"
-    };
-    const month = monthNames[latest.period] || latest.period;
-    const period = month + " " + latest.year;
-
-    return { value: val.toFixed(1) + "%", period, change, trend };
+    return { rawValue: val, period, change, trend };
   } catch (e) {
-    console.error("BLS fetch error:", e);
+    console.error("BLS error " + seriesId + ":", e);
     return null;
   }
 }
 
-// ─── BEA fetch ────────────────────────────────────────────────────────────────
-async function fetchBEAGDP(): Promise<{ value: string; period: string; change: string; trend: "up"|"down"|"flat" } | null> {
-  try {
-    // GDP by state, Georgia (FIPS 13), real GDP growth rate
-    const url = new URL("https://apps.bea.gov/api/data");
-    url.searchParams.set("UserID", BEA_KEY);
-    url.searchParams.set("method", "GetData");
-    url.searchParams.set("datasetname", "Regional");
-    url.searchParams.set("TableName", "SAGDP1");
-    url.searchParams.set("LineCode", "1");
-    url.searchParams.set("GeoFips", "GA");
-    url.searchParams.set("Year", "2024,2023");
-    url.searchParams.set("ResultFormat", "JSON");
+const SOURCE_URLS: Record<string,string> = {
+  e1: "https://fred.stlouisfed.org/series/GAUR",
+  e2: "https://fred.stlouisfed.org/series/GANAG",
+  e3: "https://fred.stlouisfed.org/series/GABPPRIV",
+  e4: "https://fred.stlouisfed.org/series/GAICLAIMS",
+  e5: "https://fred.stlouisfed.org/series/GAAVGWK",
+  e6: "https://www.bls.gov/regions/southeast/news-release/consumerpriceindex_south.htm",
+  e7: "https://fred.stlouisfed.org/series/MORTGAGE30US",
+};
 
-    const res = await fetch(url.toString());
-    const data = await res.json();
-    const rows: any[] = data?.BEAAPI?.Results?.Data || [];
-    if (rows.length < 2) return null;
-
-    // Sort by year desc
-    rows.sort((a, b) => parseInt(b.TimePeriod) - parseInt(a.TimePeriod));
-    const latest = rows[0];
-    const prev = rows[1];
-
-    const latestVal = parseFloat(latest.DataValue.replace(/,/g, ""));
-    const prevVal = parseFloat(prev.DataValue.replace(/,/g, ""));
-    const growthRate = ((latestVal - prevVal) / prevVal) * 100;
-    const change = (growthRate >= 0 ? "+" : "") + growthRate.toFixed(1) + "%";
-    const trend: "up"|"down"|"flat" = Math.abs(growthRate) < 0.1 ? "flat" : growthRate > 0 ? "up" : "down";
-
-    return {
-      value: growthRate.toFixed(1) + "%",
-      period: "Q4 " + latest.TimePeriod,
-      change,
-      trend,
-    };
-  } catch (e) {
-    console.error("BEA fetch error:", e);
-    return null;
-  }
-}
-
-// ─── Census ACS fetch ─────────────────────────────────────────────────────────
-async function fetchCensusACS(variable: string, label: string): Promise<{ value: string; period: string } | null> {
-  try {
-    // ACS 1-year estimates for Georgia (state FIPS 13)
-    const url = `https://api.census.gov/data/2023/acs/acs1?get=NAME,${variable}&for=state:13&key=${CENSUS_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    // data[0] = headers, data[1] = Georgia row
-    if (!data || data.length < 2) return null;
-    const headers: string[] = data[0];
-    const row: string[] = data[1];
-    const idx = headers.indexOf(variable);
-    if (idx === -1) return null;
-    return { value: row[idx], period: "2023" };
-  } catch (e) {
-    console.error("Census fetch error for", label, e);
-    return null;
-  }
-}
-
-// ─── Main handler ─────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const forceRefresh = searchParams.get("refresh") === "true";
 
-  // 1. Try to read from Supabase cache (fresh = updated within 24h)
+  // Try cache first
   if (!forceRefresh) {
-    const { data: cached, error } = await supabase
-      .from("ext_context")
-      .select("*")
-      .order("fetched_at", { ascending: false });
-
-    if (!error && cached && cached.length > 0) {
-      const mostRecent = new Date(cached[0].fetched_at);
-      const ageHours = (Date.now() - mostRecent.getTime()) / (1000 * 60 * 60);
-      if (ageHours < 24) {
-        return NextResponse.json({ metrics: cached, source: "cache", cachedAt: cached[0].fetched_at });
+    try {
+      const cached = await supabaseSelect("ext_context");
+      if (cached && cached.length > 0) {
+        const ageHours = (Date.now() - new Date(cached[0].fetched_at).getTime()) / 3600000;
+        if (ageHours < 24) {
+          return NextResponse.json({
+            metrics: cached.map((m: any) => ({ ...m, sourceUrl: SOURCE_URLS[m.id] || null })),
+            source: "cache",
+            cachedAt: cached[0].fetched_at,
+          });
+        }
       }
-    }
+    } catch (e) { console.error("Cache read failed:", e); }
   }
 
-  // 2. Fetch real data
+  // Fetch all in parallel
+  const now = new Date().toISOString();
+  const [unemployment, nonfarm, permits, claims, wages, cpi, mortgage] = await Promise.all([
+    fetchFRED("GAUR"),
+    fetchFRED("GANAG"),
+    fetchFRED("GABPPRIV"),
+    fetchFRED("GAICLAIMS"),
+    fetchFRED("GAAVGWK"),
+    fetchBLS("CUURS35ASA0"),
+    fetchFRED("MORTGAGE30US"),
+  ]);
+
   const updates: any[] = [];
 
-  // Georgia Unemployment (BLS)
-  const gaUnemployment = await fetchBLS(BLS_SERIES.GA_UNEMPLOYMENT);
-  if (gaUnemployment) {
-    updates.push({
-      id: "e1",
-      label: "Georgia Unemployment Rate",
-      val: gaUnemployment.value,
-      change: gaUnemployment.change,
-      trend: gaUnemployment.trend,
-      period: gaUnemployment.period,
-      src: "BLS LAUS",
-      note: parseFloat(gaUnemployment.value) < 4.3
-        ? "Below national avg (4.3%). Use in economic contrast messaging."
-        : "Above national avg. Monitor for messaging impact.",
-      fetched_at: new Date().toISOString(),
-      is_real: true,
-    });
-  }
+  if (unemployment) updates.push({
+    id: "e1", label: "Georgia Unemployment Rate",
+    val: unemployment.rawValue.toFixed(1) + "%",
+    change: unemployment.change, trend: unemployment.trend, period: unemployment.period,
+    src: "FRED / BLS LAUS", is_real: true, fetched_at: now,
+    note: unemployment.rawValue < 4.3 ? "Below national avg (4.3%). Strong economic contrast vs Collins." : "Above national avg. Monitor for messaging impact.",
+  });
 
-  // CPI South region (BLS) — closest proxy for GA inflation
-  const cpiSouth = await fetchBLS(BLS_SERIES.CPI_SOUTH);
-  if (cpiSouth) {
-    updates.push({
-      id: "e6",
-      label: "GA Inflation Rate (CPI South)",
-      val: cpiSouth.value,
-      change: cpiSouth.change,
-      trend: cpiSouth.trend,
-      period: cpiSouth.period,
-      src: "BLS CPI South Region",
-      note: "South region CPI. Declining trend weakens Collins inflation attack narrative.",
-      fetched_at: new Date().toISOString(),
-      is_real: true,
-    });
-  }
+  if (nonfarm) updates.push({
+    id: "e2", label: "Georgia Nonfarm Jobs",
+    val: (nonfarm.rawValue / 1000).toFixed(2) + "M",
+    change: nonfarm.change, trend: nonfarm.trend, period: nonfarm.period,
+    src: "FRED / BLS CES", is_real: true, fetched_at: now,
+    note: "Total nonfarm payroll employment. Job growth underpins infrastructure investment messaging.",
+  });
 
-  // Georgia GDP (BEA)
-  const gdp = await fetchBEAGDP();
-  if (gdp) {
-    updates.push({
-      id: "e2",
-      label: "Georgia GDP Growth",
-      val: gdp.value,
-      change: gdp.change,
-      trend: gdp.trend,
-      period: gdp.period,
-      src: "BEA Regional GDP",
-      note: "Georgia GDP growth. Use to counter Collins economic attack lines.",
-      fetched_at: new Date().toISOString(),
-      is_real: true,
-    });
-  }
+  if (permits) updates.push({
+    id: "e3", label: "GA Housing Permits",
+    val: Math.round(permits.rawValue).toLocaleString(),
+    change: permits.change, trend: permits.trend, period: permits.period,
+    src: "FRED / Census", is_real: true, fetched_at: now,
+    note: "New privately owned housing units authorized. Ties to housing affordability messaging.",
+  });
 
-  // Census ACS — Median household income Georgia (B19013_001E)
-  const income = await fetchCensusACS("B19013_001E", "Median Income");
-  if (income) {
-    const val = parseInt(income.value);
-    if (!isNaN(val)) {
-      updates.push({
-        id: "e4",
-        label: "Atlanta Metro Median Income",
-        val: "$" + (val / 1000).toFixed(1) + "k",
-        change: "+2.1%",
-        trend: "up" as const,
-        period: income.period,
-        src: "Census ACS",
-        note: "Rising but suburban cost-of-living pressure still high.",
-        fetched_at: new Date().toISOString(),
-        is_real: true,
-      });
-    }
-  }
+  if (claims) updates.push({
+    id: "e4", label: "GA Initial Jobless Claims",
+    val: Math.round(claims.rawValue).toLocaleString(),
+    change: claims.change, trend: claims.trend, period: claims.period,
+    src: "FRED / DOL", is_real: true, fetched_at: now,
+    note: "Weekly initial unemployment claims. Rising trend signals economic stress.",
+  });
 
-  // 3. Upsert real data into Supabase
+  if (wages) updates.push({
+    id: "e5", label: "GA Avg Weekly Wage",
+    val: "$" + Math.round(wages.rawValue).toLocaleString(),
+    change: wages.change, trend: wages.trend, period: wages.period,
+    src: "FRED / BLS QCEW", is_real: true, fetched_at: now,
+    note: "Average weekly wages all industries. Use in cost-of-living contrast messaging.",
+  });
+
+  if (cpi) updates.push({
+    id: "e6", label: "Inflation Rate (CPI South)",
+    val: cpi.rawValue.toFixed(1) + "%",
+    change: cpi.change, trend: cpi.trend, period: cpi.period,
+    src: "BLS CPI South", is_real: true, fetched_at: now,
+    note: "South region CPI. Declining trend weakens Collins inflation attack narrative.",
+  });
+
+  if (mortgage) updates.push({
+    id: "e7", label: "30-Year Mortgage Rate",
+    val: mortgage.rawValue.toFixed(2) + "%",
+    change: mortgage.change, trend: mortgage.trend, period: mortgage.period,
+    src: "FRED / Freddie Mac", is_real: true, fetched_at: now,
+    note: "Elevated rates drive housing affordability concerns in Atlanta suburbs.",
+  });
+
+  // Upsert to Supabase
   if (updates.length > 0) {
-    const { error: upsertError } = await supabase
-      .from("ext_context")
-      .upsert(updates, { onConflict: "id" });
-    if (upsertError) console.error("Supabase upsert error:", upsertError);
+    try {
+      // Clear old rows first
+      await fetch(`${SUPABASE_URL}/rest/v1/ext_context`, {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({}),
+      });
+      await supabaseUpsert("ext_context", updates);
+    } catch (e) { console.error("Supabase write error:", e); }
   }
 
-  // 4. Read full table (mix of real + cached seed for metrics we couldn't fetch)
-  const { data: allMetrics } = await supabase
-    .from("ext_context")
-    .select("*")
-    .order("id", { ascending: true });
+  // Read back
+  let allMetrics = updates;
+  try { allMetrics = await supabaseSelect("ext_context"); } catch (e) {}
 
   return NextResponse.json({
-    metrics: allMetrics || updates,
+    metrics: allMetrics.map((m: any) => ({ ...m, sourceUrl: SOURCE_URLS[m.id] || null })),
     source: "live",
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: now,
     realCount: updates.length,
   });
 }
