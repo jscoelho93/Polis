@@ -944,33 +944,27 @@ function PlatformScreen() {
 }
 
 function ExternalContextScreen() {
-  const [metrics,setMetrics]=useState(EXT_CONTEXT);
+  const [metrics,setMetrics]=useState<any[]>(EXT_CONTEXT);
   const [refreshing,setRefreshing]=useState(false);
-  const [refreshedAt,setRefreshedAt]=useState<string|null>(null);
+  const [fetchedAt,setFetchedAt]=useState<string|null>(null);
+  const [source,setSource]=useState<string|null>(null);
   const [error,setError]=useState<string|null>(null);
 
-  const refresh=async()=>{
+  useEffect(()=>{loadMetrics(false);},[]);
+
+  const loadMetrics=async(force:boolean)=>{
     setRefreshing(true);
     setError(null);
-    const schema='[{"id":"string","label":"string","val":"string","change":"string","trend":"up|down|flat","period":"string","src":"string","note":"string"}]';
-    const currentIds=metrics.map((m:any)=>m.id).join(",");
-    const prompt="You are Polis. Provide current Georgia economic and political context metrics as of April 2026. Return updated values for these metrics: Georgia Unemployment Rate, Georgia GDP Growth, GA Healthcare Uninsured Rate, Atlanta Metro Median Income, Rural GA Poverty Rate, GA Inflation Rate CPI, Savannah Port Container Volume, GA College Attainment Rate. For each metric provide the most current value you know, the change from prior period, trend direction, period, source, and a one-sentence campaign note for the Ossoff 2026 Senate race. Return ONLY valid JSON array with these exact ids: "+currentIds+". Schema: "+schema;
     try{
-      const res=await fetch("/api/anthropic",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]})
-      });
+      const res=await fetch("/api/ext-context"+(force?"?refresh=true":""));
       const data=await res.json();
-      const text=data.content?.map((c:any)=>c.text||"").join("")||"";
-      const clean=text.replace(/```json|```/g,"").trim();
-      const parsed=JSON.parse(clean);
-      if(Array.isArray(parsed)&&parsed.length>0){
-        setMetrics(parsed);
-        setRefreshedAt(new Date().toLocaleTimeString());
+      if(data.metrics&&data.metrics.length>0){
+        setMetrics(data.metrics);
+        setFetchedAt(data.fetchedAt||data.cachedAt||null);
+        setSource(data.source||null);
       }
     }catch(e){
-      setError("Could not refresh. Showing cached data.");
+      setError("Could not load live data. Showing seed values.");
     }
     setRefreshing(false);
   };
@@ -981,21 +975,27 @@ function ExternalContextScreen() {
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,gap:12,flexWrap:"wrap" as const}}>
       <div style={{fontSize:11,color:"#64748b"}}>
-        {refreshedAt?"Refreshed via Polis AI · "+refreshedAt:"Seed data · not yet refreshed"}
+        {fetchedAt
+          ?(source==="cache"?"Cached · ":"Live · ")+new Date(fetchedAt).toLocaleString()
+          :"Seed data · loading..."}
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center"}}>
         {error&&<span style={{fontSize:11,color:"#f97316"}}>{error}</span>}
-        <div onClick={!refreshing?refresh:undefined} style={{padding:"5px 12px",borderRadius:6,cursor:refreshing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600,whiteSpace:"nowrap" as const}}>
-          {refreshing?"Refreshing...":"⟳ Refresh data"}
+        <div onClick={!refreshing?()=>loadMetrics(true):undefined} style={{padding:"5px 12px",borderRadius:6,cursor:refreshing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600,whiteSpace:"nowrap" as const}}>
+          {refreshing?"Loading...":"⟳ Refresh"}
         </div>
       </div>
     </div>
+    {error&&<div style={{background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fdba74"}}>{error}</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
       {metrics.map((m:any,i:number)=>(
         <div key={m.id||i} style={{background:"rgba(15,23,42,0.7)",border:"1px solid rgba(51,65,85,0.5)",borderRadius:10,padding:16,borderTop:"2px solid "+(trendColors[m.trend]||"#94a3b8")}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
             <div style={{fontSize:11,color:"#64748b",flex:1,paddingRight:8}}>{m.label}</div>
-            <div style={{fontSize:10,color:"#475569"}}>{m.period}</div>
+            <div style={{display:"flex",flexDirection:"column" as const,alignItems:"flex-end",gap:2}}>
+              <div style={{fontSize:10,color:"#475569"}}>{m.period}</div>
+              {m.is_real&&<div style={{fontSize:9,fontWeight:700,color:"#22c55e",letterSpacing:"0.04em"}}>LIVE</div>}
+            </div>
           </div>
           <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
             <div style={{fontSize:20,fontWeight:800,color:"#f1f5f9"}}>{m.val}</div>
@@ -1005,6 +1005,9 @@ function ExternalContextScreen() {
           <div style={{fontSize:11,color:"#94a3b8",fontStyle:"italic"}}>{m.note}</div>
         </div>
       ))}
+    </div>
+    <div style={{marginTop:12,fontSize:10,color:"#334155"}}>
+      Real data: BLS (unemployment, CPI) · BEA (GDP) · Census ACS (income) · Other metrics: seed data
     </div>
   </div>;
 }
