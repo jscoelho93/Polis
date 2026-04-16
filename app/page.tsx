@@ -213,68 +213,125 @@ function ApprovalChart({metric="pct"}: any) {
 // ─── SCREENS ──────────────────────────────────────────────────────────────────
 
 function MorningBrief() {
-  const recentPosts = [
-    {who:"Ossoff",platform:"Twitter",content:"Georgia is building again. 12,000 new jobs at the Port of Savannah.",likes:4821,shares:1204,time:"3h ago",sent:"positive"},
-    {who:"Collins",platform:"Twitter",content:"Ossoff voted with Biden 96% of the time. Inflation is still hammering Georgia families.",likes:2341,shares:891,time:"8h ago",sent:"negative"},
-    {who:"Ossoff",platform:"Instagram",content:"Visited the Port of Savannah today. The infrastructure investment we secured is already creating jobs.",likes:8930,shares:0,time:"5h ago",sent:"positive"},
-  ];
+  const [approval,setApproval]=useState<any>(null);
+  const [polls,setPolls]=useState<any[]>([]);
+  const [narratives,setNarratives]=useState<any[]>(NARRATIVES_SEED);
+  const [extCtx,setExtCtx]=useState<any[]>(EXT_CONTEXT);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    // Load live narratives from sessionStorage
+    try{
+      const c=sessionStorage.getItem("polis_narratives");
+      if(c){const d=JSON.parse(c);if(d.narratives?.length)setNarratives(d.narratives);}
+    }catch(e){}
+
+    // Load approval + polls + ext context
+    Promise.all([
+      fetch("/api/approval").then(r=>r.json()).catch(()=>null),
+      fetch("/api/polls").then(r=>r.json()).catch(()=>({polls:[]})),
+      fetch("/api/ext-context").then(r=>r.json()).catch(()=>({metrics:[]})),
+    ]).then(([a,p,e])=>{
+      if(a&&!a.error)setApproval(a);
+      if(p.polls?.length)setPolls(p.polls);
+      if(e.metrics?.length)setExtCtx(e.metrics);
+      setLoading(false);
+    });
+  },[]);
+
+  const topThreat=narratives.filter((n:any)=>n.sentiment==="negative").sort((a:any,b:any)=>b.vel-a.vel)[0];
+  const topOpportunity=narratives.filter((n:any)=>n.sentiment==="positive").sort((a:any,b:any)=>b.vel-a.vel)[0];
+  const unemployment=extCtx.find((m:any)=>m.id==="e1");
+  const cpi=extCtx.find((m:any)=>m.id==="e6");
+  const today=new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-      <div style={{fontSize:11,color:"#64748b"}}>Sunday, April 5, 2026 · 6:00 AM ET</div>
+      <div style={{fontSize:11,color:"#64748b"}}>{today}</div>
       <Badge label="Daily Brief" color="#3b82f6" bg="rgba(59,130,246,0.12)"/>
+      {loading&&<Badge label="Loading live data..." color="#f59e0b" bg="rgba(245,158,11,0.1)"/>}
     </div>
+
+    {/* Approval card */}
     <Card style={{marginBottom:10}}>
       <SL>How am I doing?</SL>
       <div style={{display:"flex",alignItems:"flex-end",gap:16,flexWrap:"wrap"}}>
-        <div><div style={{fontSize:48,fontWeight:800,color:"#f1f5f9",lineHeight:1}}>47.8<span style={{fontSize:22}}>%</span></div><div style={{fontSize:12,color:"#64748b",marginTop:4}}>Blended approval · 4 polls in signal</div></div>
-        <div style={{marginBottom:4}}><div style={{fontSize:20,fontWeight:700,color:"#22c55e"}}>+3.7 net</div><DeltaBadge v={1.6}/> <span style={{fontSize:11,color:"#64748b"}}>this week · 30-day high</span></div>
-        <div style={{background:"rgba(59,130,246,0.08)",borderRadius:8,padding:"10px 14px",textAlign:"center"}}><div style={{fontSize:11,color:"#64748b"}}>Lead over Collins</div><div style={{fontSize:28,fontWeight:800,color:"#22c55e"}}>+8.6</div><div style={{fontSize:10,color:"#22c55e"}}>▲ +3.8 this week</div></div>
-      </div>
-    </Card>
-    <Card style={{marginBottom:10}}>
-      <SL>What changed and why</SL>
-      <p style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6,margin:"0 0 10px"}}>Women 30-55 moved <strong style={{color:"#f1f5f9"}}>+3.2 pts</strong> this week driven by the Savannah port jobs narrative (+1.8pt approval correlation). Atlanta suburban voters moved <strong style={{color:"#f1f5f9"}}>+1.8 pts</strong>. Collins inflation ads at 900k impressions - no polling movement yet, 72h watch window.</p>
-      <div style={{fontSize:14,fontWeight:600,color:"#3b82f6",marginBottom:6}}>"Georgia is building again. 12,000 jobs in Savannah. Collins voted against it."</div>
-    </Card>
-    <Card style={{marginBottom:10}}>
-      <SL>Social media pulse - last 12h</SL>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-        {[{p:"Twitter/X",o:312,c:89,og:2.1},{p:"Instagram",o:198,c:41,og:3.4},{p:"Facebook",o:441,c:127,og:0.8}].map((s,i)=>(
-          <div key={i} style={{background:"rgba(15,23,42,0.6)",borderRadius:8,padding:10}}>
-            <div style={{fontSize:10,color:"#64748b",marginBottom:6}}>{s.p}</div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"#3b82f6"}}>Ossoff</span><span style={{fontSize:11,fontWeight:700,color:"#e2e8f0"}}>{s.o}k</span></div>
-            <MiniBar val={s.o} max={500} color="#3b82f6" h={3}/>
-            <div style={{fontSize:9,color:"#22c55e",marginBottom:4}}>+{s.og}% / wk</div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"#f27070"}}>Collins</span><span style={{fontSize:11,fontWeight:700,color:"#e2e8f0"}}>{s.c}k</span></div>
-            <MiniBar val={s.c} max={500} color="#f27070" h={3}/>
+        <div>
+          <div style={{fontSize:48,fontWeight:800,color:"#f1f5f9",lineHeight:1}}>
+            {approval?.ossoff?approval.ossoff.toFixed(1):loading?"...":"—"}
+            <span style={{fontSize:22}}>%</span>
           </div>
-        ))}
-      </div>
-      {recentPosts.map((p,i)=>(
-        <div key={i} style={{padding:"7px 0",borderBottom:i<recentPosts.length-1?"1px solid rgba(51,65,85,0.3)":"none"}}>
-          <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}>
-            <div style={{width:6,height:6,borderRadius:"50%",background:SENT_COLOR[p.sent]}}/>
-            <Badge label={p.who} color={p.who==="Ossoff"?"#3b82f6":"#f27070"} bg={p.who==="Ossoff"?"rgba(59,130,246,0.1)":"rgba(242,112,112,0.1)"}/>
-            <Badge label={p.platform} color="#64748b" bg="rgba(51,65,85,0.3)"/>
-            <span style={{fontSize:10,color:"#475569",marginLeft:"auto"}}>{p.time}</span>
+          <div style={{fontSize:12,color:"#64748b",marginTop:4}}>
+            Poll average · {polls.length} polls in signal
           </div>
-          <div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic"}}>"{p.content.slice(0,90)}"</div>
-          <div style={{fontSize:10,color:"#475569",marginTop:2}}>❤ {p.likes.toLocaleString()} · ↗ {p.shares.toLocaleString()}</div>
         </div>
-      ))}
+        {approval?.lead!=null&&<div style={{marginBottom:4}}>
+          <div style={{fontSize:20,fontWeight:700,color:"#22c55e"}}>+{approval.lead} lead vs Collins</div>
+          <div style={{fontSize:11,color:"#64748b"}}>vs Collins {approval?.collins?.toFixed(1)}%</div>
+        </div>}
+        {approval?.ossoff&&<div style={{background:"rgba(59,130,246,0.08)",borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
+          <div style={{fontSize:11,color:"#64748b"}}>Latest poll</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#e2e8f0"}}>{polls[0]?.display_name||"—"}</div>
+          <div style={{fontSize:10,color:"#475569"}}>{polls[0]?.poll_date||""}</div>
+        </div>}
+      </div>
     </Card>
+
+    {/* Active threat + opportunity */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+      <Card style={{borderLeft:"3px solid #ef4444"}}>
+        <SL>Top threat</SL>
+        {topThreat
+          ?<><div style={{fontSize:13,fontWeight:600,color:"#f1f5f9",marginBottom:4}}>{topThreat.label}</div>
+            <div style={{fontSize:11,color:"#64748b"}}>Vol {topThreat.vol} · <span style={{color:"#ef4444"}}>+{topThreat.vel} velocity</span></div></>
+          :<div style={{fontSize:12,color:"#475569"}}>No active threats</div>}
+      </Card>
+      <Card style={{borderLeft:"3px solid #22c55e"}}>
+        <SL>Top opportunity</SL>
+        {topOpportunity
+          ?<><div style={{fontSize:13,fontWeight:600,color:"#f1f5f9",marginBottom:4}}>{topOpportunity.label}</div>
+            <div style={{fontSize:11,color:"#64748b"}}>Vol {topOpportunity.vol} · <span style={{color:"#22c55e"}}>+{topOpportunity.vel} velocity</span></div></>
+          :<div style={{fontSize:12,color:"#475569"}}>No positive narratives</div>}
+      </Card>
+    </div>
+
+    {/* Georgia economic context */}
+    {(unemployment||cpi)&&<Card style={{marginBottom:10}}>
+      <SL>Georgia economic context</SL>
+      <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+        {unemployment&&<div>
+          <div style={{fontSize:11,color:"#64748b"}}>Unemployment</div>
+          <div style={{fontSize:18,fontWeight:700,color:"#f1f5f9"}}>{unemployment.val}</div>
+          <div style={{fontSize:10,color:unemployment.trend==="down"?"#22c55e":"#ef4444"}}>{unemployment.change} · {unemployment.period}</div>
+          {unemployment.is_real&&<div style={{fontSize:9,color:"#22c55e"}}>LIVE · {unemployment.src}</div>}
+        </div>}
+        {cpi&&<div>
+          <div style={{fontSize:11,color:"#64748b"}}>Inflation (CPI South)</div>
+          <div style={{fontSize:18,fontWeight:700,color:"#f1f5f9"}}>{cpi.val}</div>
+          <div style={{fontSize:10,color:cpi.trend==="down"?"#22c55e":"#ef4444"}}>{cpi.change} · {cpi.period}</div>
+          {cpi.is_real&&<div style={{fontSize:9,color:"#22c55e"}}>LIVE · {cpi.src}</div>}
+        </div>}
+        <div style={{fontSize:11,color:"#475569",marginLeft:"auto",alignSelf:"flex-end"}}>
+          Collins inflation attack narrative: {cpi&&parseFloat(cpi.val)<4?"weakening as CPI falls":"elevated"}
+        </div>
+      </div>
+    </Card>}
+
+    {/* Today alerts */}
     <Card style={{marginBottom:10}}>
-      <SL>Active threats</SL>
-      {ALERTS_SEED.filter(a=>!a.ack).slice(0,2).map(a=>(
+      <SL>Active alerts</SL>
+      {ALERTS_SEED.filter((a:any)=>!a.ack).slice(0,3).map((a:any)=>(
         <div key={a.id} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:SEV_COLOR[a.sev],marginTop:5,flexShrink:0}}/>
           <div style={{fontSize:11,color:"#94a3b8"}}><span style={{color:SEV_COLOR[a.sev],fontWeight:600}}>{a.sev.toUpperCase()}</span> · {a.title}</div>
         </div>
       ))}
     </Card>
+
+    {/* Calendar */}
     <Card>
       <SL>Today schedule</SL>
-      {CALENDAR.slice(0,3).map(e=>(
+      {CALENDAR.slice(0,3).map((e:any)=>(
         <div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:5}}>
           <Badge label={e.prep==="briefed"?"Briefed":"Unbriefed"} color={e.prep==="briefed"?"#22c55e":"#f97316"} bg={e.prep==="briefed"?"rgba(34,197,94,0.1)":"rgba(249,115,22,0.1)"}/>
           <div style={{fontSize:12,color:"#cbd5e1"}}>{e.date} {e.time} · {e.title}</div>
@@ -311,9 +368,9 @@ function ApprovalScreen() {
   const key=metric==="pct"?"ossoff_smooth":"ossoff_smooth";
   const colKey=metric==="pct"?"collins_smooth":"collins_smooth";
   const allVals=trend.flatMap((d:any)=>[d.ossoff_smooth,d.collins_smooth].filter(Boolean));
-  const mn=0;
-  const mx=100;
-  const range=100;
+  const mn=allVals.length>0?Math.floor(Math.min(...allVals)-2):30;
+  const mx=allVals.length>0?Math.ceil(Math.max(...allVals)+2):60;
+  const range=mx-mn||1;
   const toY=(v:number)=>cH-((v-mn)/range)*cH;
   const toX=(i:number)=>(i/(Math.max(trend.length-1,1)))*cW;
 
@@ -490,8 +547,13 @@ function PollingVaultScreen() {
   const [fetching,setFetching]=useState(false);
   const [selPoll,setSelPoll]=useState<string|null>(null);
   const [error,setError]=useState<string|null>(null);
-  const [source,setSource]=useState<string|null>(null);
   const [approval,setApproval]=useState<any>(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [newPoll,setNewPoll]=useState({
+    pollster:"",poll_date:"",sample_size:"",population:"lv",method:"",
+    ossoff_pct:"",collins_pct:"",dooley_pct:"",url:""
+  });
+  const [adding,setAdding]=useState(false);
 
   const loadPolls=async(force=false)=>{
     setFetching(true);
@@ -501,8 +563,6 @@ function PollingVaultScreen() {
       const data=await res.json();
       if(data.error)throw new Error(data.error);
       setPolls(data.polls||[]);
-      setSource(data.source||null);
-      // Also refresh approval
       const aRes=await fetch("/api/approval");
       const aData=await aRes.json();
       if(!aData.error)setApproval(aData);
@@ -513,6 +573,41 @@ function PollingVaultScreen() {
 
   useEffect(()=>{loadPolls(false);},[]);
 
+  const addPoll=async()=>{
+    if(!newPoll.pollster||!newPoll.poll_date||!newPoll.ossoff_pct)return;
+    setAdding(true);
+    try{
+      const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
+      const poll={
+        id:"manual_"+Date.now(),
+        pollster:newPoll.pollster,
+        display_name:newPoll.pollster,
+        poll_date:newPoll.poll_date,
+        end_date:newPoll.poll_date,
+        sample_size:parseInt(newPoll.sample_size)||null,
+        population:newPoll.population,
+        method:newPoll.method||"Manual entry",
+        ossoff_pct:parseFloat(newPoll.ossoff_pct)||null,
+        collins_pct:parseFloat(newPoll.collins_pct)||null,
+        dooley_pct:parseFloat(newPoll.dooley_pct)||null,
+        url:newPoll.url||"",
+        fetched_at:new Date().toISOString(),
+      };
+      // Save via API
+      const res=await fetch("/api/polls/add",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(poll),
+      });
+      if(res.ok){
+        await loadPolls(false);
+        setShowAdd(false);
+        setNewPoll({pollster:"",poll_date:"",sample_size:"",population:"lv",method:"",ossoff_pct:"",collins_pct:"",dooley_pct:"",url:""});
+      }
+    }catch(e:any){setError("Could not save poll: "+e.message);}
+    setAdding(false);
+  };
+
   const inSignal=polls.filter((p:any)=>p.ossoff_pct&&p.collins_pct);
 
   return <div style={{maxWidth:720}}>
@@ -520,19 +615,47 @@ function PollingVaultScreen() {
       <div>
         <div style={{fontSize:11,color:"#64748b"}}>Blended signal baseline</div>
         <div style={{fontSize:32,fontWeight:800,color:"#f1f5f9"}}>{approval?.ossoff?approval.ossoff.toFixed(1)+"%":"—"}</div>
-        <div style={{fontSize:11,color:"#64748b"}}>{polls.length} polls in signal</div>
+        <div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls in signal</div>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <div onClick={()=>loadPolls(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>{fetching?"Fetching...":"⟳ Fetch live polls"}</div>
+        <div onClick={()=>setShowAdd(true)} style={{background:"rgba(34,197,94,0.15)",border:"1px solid rgba(34,197,94,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#22c55e",fontWeight:600}}>+ Add poll</div>
+        <div onClick={()=>loadPolls(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>{fetching?"Fetching...":"⟳ Fetch live"}</div>
       </div>
     </div>
 
     {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
 
+    {/* Add poll form */}
+    {showAdd&&<Card style={{marginBottom:14,border:"1px solid rgba(34,197,94,0.3)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+        <SL>Add poll manually</SL>
+        <div onClick={()=>setShowAdd(false)} style={{fontSize:11,color:"#64748b",cursor:"pointer"}}>✕</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+        <FieldInput value={newPoll.pollster} onChange={(v:string)=>setNewPoll(p=>({...p,pollster:v}))} placeholder="Pollster name *"/>
+        <FieldInput value={newPoll.poll_date} onChange={(v:string)=>setNewPoll(p=>({...p,poll_date:v}))} placeholder="Date (YYYY-MM-DD) *"/>
+        <FieldInput value={newPoll.ossoff_pct} onChange={(v:string)=>setNewPoll(p=>({...p,ossoff_pct:v}))} placeholder="Ossoff % *"/>
+        <FieldInput value={newPoll.collins_pct} onChange={(v:string)=>setNewPoll(p=>({...p,collins_pct:v}))} placeholder="Collins %"/>
+        <FieldInput value={newPoll.dooley_pct} onChange={(v:string)=>setNewPoll(p=>({...p,dooley_pct:v}))} placeholder="Dooley %"/>
+        <FieldInput value={newPoll.sample_size} onChange={(v:string)=>setNewPoll(p=>({...p,sample_size:v}))} placeholder="Sample size (n)"/>
+        <FieldSelect value={newPoll.population} onChange={(v:string)=>setNewPoll(p=>({...p,population:v}))}>
+          <option value="lv">Likely Voters</option>
+          <option value="rv">Registered Voters</option>
+          <option value="a">Adults</option>
+        </FieldSelect>
+        <FieldInput value={newPoll.method} onChange={(v:string)=>setNewPoll(p=>({...p,method:v}))} placeholder="Method (e.g. Live Phone)"/>
+      </div>
+      <FieldInput value={newPoll.url} onChange={(v:string)=>setNewPoll(p=>({...p,url:v}))} placeholder="Source URL (optional)"/>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <div onClick={!adding?addPoll:undefined} style={{padding:"7px 16px",borderRadius:6,background:"rgba(34,197,94,0.15)",border:"1px solid rgba(34,197,94,0.4)",fontSize:12,color:"#22c55e",cursor:"pointer",fontWeight:600}}>{adding?"Saving...":"Save poll"}</div>
+        <div onClick={()=>setShowAdd(false)} style={{padding:"7px 16px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
+      </div>
+    </Card>}
+
     {loading?<div style={{padding:40,textAlign:"center",color:"#475569"}}>Loading polls...</div>:
     polls.length===0?<div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"20px",textAlign:"center"}}>
       <div style={{fontSize:14,color:"#e2e8f0",marginBottom:8}}>No polls loaded yet</div>
-      <div style={{fontSize:12,color:"#64748b"}}>Click "Fetch live polls" to pull Georgia 2026 Senate polls from FiveThirtyEight</div>
+      <div style={{fontSize:12,color:"#64748b"}}>Click "Fetch live" to pull public polls or "+ Add poll" to enter one manually</div>
     </div>:
     polls.map((p:any)=>(
       <Card key={p.id} style={{marginBottom:8,cursor:"pointer",border:"1px solid "+(selPoll===p.id?"rgba(59,130,246,0.5)":"rgba(51,65,85,0.5)")}}>
@@ -540,11 +663,11 @@ function PollingVaultScreen() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
             <div>
               <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{p.display_name}</div>
-              <div style={{fontSize:11,color:"#64748b"}}>{p.poll_date} · {p.method||p.population?.toUpperCase()||"Unknown method"} · n={(p.sample_size||"?").toLocaleString()}</div>
+              <div style={{fontSize:11,color:"#64748b"}}>{p.poll_date} · {p.method||p.population?.toUpperCase()||""} · {p.sample_size?"n="+p.sample_size.toLocaleString():""}</div>
             </div>
             <div style={{display:"flex",gap:6}}>
+              {p.id?.startsWith("manual_")&&<Badge label="Manual" color="#8b5cf6" bg="rgba(139,92,246,0.1)"/>}
               <Badge label="In signal" color="#22c55e" bg="rgba(34,197,94,0.1)"/>
-              <Badge label="Public poll" color="#3b82f6" bg="rgba(59,130,246,0.1)"/>
             </div>
           </div>
           <div style={{display:"flex",gap:16,marginTop:10}}>
