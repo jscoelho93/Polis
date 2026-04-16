@@ -218,11 +218,39 @@ function MorningBrief() {
   const [narratives,setNarratives]=useState<any[]>(NARRATIVES_SEED);
   const [extCtx,setExtCtx]=useState<any[]>(EXT_CONTEXT);
   const [loading,setLoading]=useState(true);
+  const [refreshing,setRefreshing]=useState(false);
+
+  const refreshAll=async()=>{
+    setRefreshing(true);
+    try{
+      // Fetch narratives
+      const nRes=await fetch("/api/narratives");
+      const nData=await nRes.json();
+      if(nData.narratives?.length){
+        localStorage.setItem("polis_narratives",JSON.stringify(nData));
+        localStorage.setItem("polis_narratives_ts",Date.now().toString());
+        setNarratives(nData.narratives.sort((a:any,b:any)=>b.vel-a.vel));
+      }
+      // Fetch polls
+      const pRes=await fetch("/api/polls?refresh=true");
+      const pData=await pRes.json();
+      if(pData.polls?.length)setPolls(pData.polls);
+      // Fetch ext context
+      const eRes=await fetch("/api/ext-context?refresh=true");
+      const eData=await eRes.json();
+      if(eData.metrics?.length)setExtCtx(eData.metrics);
+      // Refresh approval
+      const aRes=await fetch("/api/approval");
+      const aData=await aRes.json();
+      if(!aData.error)setApproval(aData);
+    }catch(e){console.error("Refresh error:",e);}
+    setRefreshing(false);
+  };
 
   useEffect(()=>{
-    // Load live narratives from sessionStorage
+    // Load live narratives from localStorage
     try{
-      const c=sessionStorage.getItem("polis_narratives");
+      const c=localStorage.getItem("polis_narratives");
       if(c){const d=JSON.parse(c);if(d.narratives?.length)setNarratives(d.narratives);}
     }catch(e){}
 
@@ -246,10 +274,16 @@ function MorningBrief() {
   const today=new Date().toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 
   return <div style={{maxWidth:720}}>
-    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap" as const}}>
       <div style={{fontSize:11,color:"#64748b"}}>{today}</div>
       <Badge label="Daily Brief" color="#3b82f6" bg="rgba(59,130,246,0.12)"/>
-      {loading&&<Badge label="Loading live data..." color="#f59e0b" bg="rgba(245,158,11,0.1)"/>}
+      {loading&&<Badge label="Loading..." color="#f59e0b" bg="rgba(245,158,11,0.1)"/>}
+      <div style={{marginLeft:"auto"}}>
+        <div onClick={refreshAll} style={{padding:"5px 14px",borderRadius:6,cursor:refreshing?"not-allowed":"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:13}}>⟳</span>
+          {refreshing?"Refreshing...":"Refresh all intelligence"}
+        </div>
+      </div>
     </div>
 
     {/* Approval card */}
@@ -445,7 +479,7 @@ function OppositionScreen() {
   const [loading,setLoading]=useState(true);
 
   const getLiveNarratives=()=>{
-    try{const c=sessionStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
+    try{const c=localStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
     return NARRATIVES_SEED;
   };
   const narratives=getLiveNarratives();
@@ -796,9 +830,9 @@ function NarrativesScreen() {
   const displayed=liveNarratives||NARRATIVES_SEED;
 
   useEffect(()=>{
-    // Auto-restore from sessionStorage on mount
+    // Auto-restore from localStorage on mount
     try{
-      const c=sessionStorage.getItem("polis_narratives");
+      const c=localStorage.getItem("polis_narratives");
       if(c){const d=JSON.parse(c);if(d.narratives?.length){setLiveNarratives([...d.narratives].sort((a:any,b:any)=>b.vel-a.vel));setFetchedAt(d.fetchedAt);}}
     }catch(e){}
   },[]);
@@ -807,7 +841,7 @@ function NarrativesScreen() {
     const CK="polis_narratives",CT="polis_narratives_ts",TW=12*60*60*1000;
     if(!force){
       try{
-        const c=sessionStorage.getItem(CK),t=sessionStorage.getItem(CT);
+        const c=localStorage.getItem(CK),t=localStorage.getItem(CT);
         if(c&&t&&Date.now()-parseInt(t)<TW){
           const d=JSON.parse(c);
           setLiveNarratives([...d.narratives].sort((a:any,b:any)=>b.vel-a.vel));
@@ -822,8 +856,8 @@ function NarrativesScreen() {
       const text=await res.text();
       const data=JSON.parse(text);
       if(data.error)throw new Error(data.error);
-      sessionStorage.setItem(CK,JSON.stringify(data));
-      sessionStorage.setItem(CT,Date.now().toString());
+      localStorage.setItem(CK,JSON.stringify(data));
+      localStorage.setItem(CT,Date.now().toString());
       setLiveNarratives([...data.narratives].sort((a:any,b:any)=>b.vel-a.vel));
       setFetchedAt(data.fetchedAt);
     }catch(e:any){setError(e.message);}
@@ -889,7 +923,7 @@ function NarrativesScreen() {
 function TalkingPointsScreen() {
   const getLiveNarratives=()=>{
     try{
-      const c=sessionStorage.getItem("polis_narratives");
+      const c=localStorage.getItem("polis_narratives");
       if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}
     }catch(e){}
     return NARRATIVES_SEED;
@@ -1462,7 +1496,7 @@ function ContactsScreen() {
 
 function AlertsScreen() {
   const getLiveNarratives=()=>{
-    try{const c=sessionStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
+    try{const c=localStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
     return NARRATIVES_SEED;
   };
   const [narratives,setNarratives]=useState<any[]>(getLiveNarratives);
@@ -1738,7 +1772,7 @@ const BOTTOM_TABS=[
 
 export default function App() {
   const [screen,setScreen]=useState("brief");
-  const [openGroups,setOpenGroups]=useState<Record<string,boolean>>({overview:true,performance:true,platform:false,logistics:false,alerts:false,agents:false});
+  const [openGroups,setOpenGroups]=useState<Record<string,boolean>>({overview:true,performance:false,platform:false,logistics:false,alerts:false,agents:false});
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const [sidebarApproval,setSidebarApproval]=useState<any>(null);
   const isMobile=useIsMobile();
