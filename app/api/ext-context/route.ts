@@ -192,11 +192,11 @@ export async function GET(request: Request) {
   });
 
   if (wages) updates.push({
-    id: "e5", label: "GA Avg Hourly Earnings",
-    val: "$" + wages.rawValue.toFixed(2),
+    id: "e5", label: "GA Avg Weekly Earnings",
+    val: "$" + Math.round(wages.rawValue).toLocaleString(),
     change: wages.change, trend: wages.trend, period: wages.period,
     src: "FRED / BLS QCEW", is_real: true, fetched_at: now,
-    note: "Average hourly earnings, total private. Use in cost-of-living and wage growth messaging.",
+    note: "Average weekly earnings, total private. Use in wage growth and cost-of-living contrast messaging.",
   });
 
   if (cpi) updates.push({
