@@ -351,26 +351,32 @@ function MorningBrief() {
       </div>
     </Card>}
 
-    {/* Today alerts */}
+    {/* Today alerts - from live narratives */}
     <Card style={{marginBottom:10}}>
       <SL>Active alerts</SL>
-      {ALERTS_SEED.filter((a:any)=>!a.ack).slice(0,3).map((a:any)=>(
-        <div key={a.id} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:SEV_COLOR[a.sev],marginTop:5,flexShrink:0}}/>
-          <div style={{fontSize:11,color:"#94a3b8"}}><span style={{color:SEV_COLOR[a.sev],fontWeight:600}}>{a.sev.toUpperCase()}</span> · {a.title}</div>
+      {narratives.filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed").slice(0,3).map((n:any)=>(
+        <div key={n.id} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:6}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:n.sentiment==="negative"?"#f97316":"#eab308",marginTop:5,flexShrink:0}}/>
+          <div style={{fontSize:11,color:"#94a3b8"}}>
+            <span style={{color:n.sentiment==="negative"?"#f97316":"#eab308",fontWeight:600}}>{n.sentiment==="negative"?"HIGH":"MEDIUM"}</span> · {n.label}
+          </div>
         </div>
       ))}
+      {narratives.filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed").length===0&&
+        <div style={{fontSize:11,color:"#475569"}}>No active threats · fetch narratives to populate</div>}
     </Card>
 
     {/* Calendar */}
     <Card>
-      <SL>Today schedule</SL>
-      {CALENDAR.slice(0,3).map((e:any)=>(
-        <div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:5}}>
-          <Badge label={e.prep==="briefed"?"Briefed":"Unbriefed"} color={e.prep==="briefed"?"#22c55e":"#f97316"} bg={e.prep==="briefed"?"rgba(34,197,94,0.1)":"rgba(249,115,22,0.1)"}/>
-          <div style={{fontSize:12,color:"#cbd5e1"}}>{e.date} {e.time} · {e.title}</div>
-        </div>
-      ))}
+      <SL>Upcoming events</SL>
+      {(()=>{let evts=CALENDAR;try{const s=localStorage.getItem("polis_calendar");if(s)evts=JSON.parse(s);}catch(e){}
+        return evts.slice(0,4).map((e:any)=>(
+          <div key={e.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:5}}>
+            <Badge label={e.prep==="briefed"?"Briefed":"Unbriefed"} color={e.prep==="briefed"?"#22c55e":"#f97316"} bg={e.prep==="briefed"?"rgba(34,197,94,0.1)":"rgba(249,115,22,0.1)"}/>
+            <div style={{fontSize:12,color:"#cbd5e1"}}>{e.date} {e.time} · {e.title}</div>
+          </div>
+        ));
+      })()}
     </Card>
   </div>;
 }
@@ -1381,7 +1387,7 @@ function CalendarScreen() {
         <FieldSelect value={newEvent.urgency} onChange={(v:string)=>setNewEvent(p=>({...p,urgency:v}))}><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></FieldSelect>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <div onClick={()=>{if(!newEvent.title)return;setEvents((prev:any)=>[...prev,{...newEvent,id:"ev"+Date.now(),prep:"unbriefed",brief:null}]);setShowNew(false);setNewEvent({title:"",type:"interview",date:"",time:"",loc:"",urgency:"medium"});}} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
+        <div onClick={()=>{if(!newEvent.title)return;setEvents((prev:any)=>{const updated=[...prev,{...newEvent,id:"ev"+Date.now(),prep:"unbriefed",brief:null}];try{localStorage.setItem("polis_calendar",JSON.stringify(updated));}catch(e){}return updated;});setShowNew(false);setNewEvent({title:"",type:"interview",date:"",time:"",loc:"",urgency:"medium"});}} style={{padding:"6px 14px",borderRadius:6,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",fontSize:12,color:"#22c55e",cursor:"pointer"}}>Save</div>
         <div onClick={()=>setShowNew(false)} style={{padding:"6px 14px",borderRadius:6,background:"rgba(51,65,85,0.3)",border:"1px solid rgba(51,65,85,0.5)",fontSize:12,color:"#64748b",cursor:"pointer"}}>Cancel</div>
       </div>
     </Card>}
@@ -1500,14 +1506,23 @@ function AlertsScreen() {
     return NARRATIVES_SEED;
   };
   const [narratives,setNarratives]=useState<any[]>(getLiveNarratives);
-  const [acknowledged,setAcknowledged]=useState<Set<string>>(new Set());
+  const [acknowledged,setAcknowledged]=useState<Set<string>>(()=>{
+    try{const s=localStorage.getItem("polis_acknowledged");if(s)return new Set(JSON.parse(s));}catch(e){}
+    return new Set();
+  });
 
   useEffect(()=>{
     const interval=setInterval(()=>setNarratives(getLiveNarratives()),5000);
     return ()=>clearInterval(interval);
   },[]);
 
-  const ack=(id:string)=>setAcknowledged(prev=>new Set([...prev,id]));
+  const ack=(id:string)=>{
+    setAcknowledged(prev=>{
+      const next=new Set([...prev,id]);
+      try{localStorage.setItem("polis_acknowledged",JSON.stringify([...next]));}catch(e){}
+      return next;
+    });
+  };
 
   // Only negative/mixed narratives generate alerts
   // Severity matches sentiment color from What They're Saying
@@ -1783,8 +1798,9 @@ export default function App() {
   const getUnreadCount=()=>{
     try{
       const c=localStorage.getItem("polis_narratives");
+      const acked=new Set(JSON.parse(localStorage.getItem("polis_acknowledged")||"[]"));
       if(c){const d=JSON.parse(c);if(d.narratives?.length){
-        return d.narratives.filter((n:any)=>n.sentiment==="negative"||n.sentiment==="mixed").length;
+        return d.narratives.filter((n:any)=>(n.sentiment==="negative"||n.sentiment==="mixed")&&!acked.has("n_"+n.id)).length;
       }}
     }catch(e){}
     return ALERTS_SEED.filter((a:any)=>!a.ack).length;
