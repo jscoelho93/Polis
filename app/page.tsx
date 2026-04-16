@@ -285,153 +285,267 @@ function MorningBrief() {
 }
 
 function ApprovalScreen() {
+  const [approval,setApproval]=useState<any>(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState<string|null>(null);
   const [metric,setMetric]=useState("pct");
+
+  useEffect(()=>{
+    fetch("/api/approval").then(r=>r.json()).then(d=>{
+      if(d.error)setError(d.error);
+      else setApproval(d);
+    }).catch(e=>setError(e.message)).finally(()=>setLoading(false));
+  },[]);
+
+  const fmt=(n:number|null,d=1)=>n==null?"—":(n>=0?"+":"")+n.toFixed(d);
+
+  if(loading)return <div style={{maxWidth:720,padding:40,textAlign:"center",color:"#475569"}}>Loading approval data...</div>;
+  if(error||!approval)return <div style={{maxWidth:720}}>
+    <div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#fca5a5"}}>{error||"No poll data available. Fetch polls first."}</div>
+    <div style={{marginTop:10,fontSize:11,color:"#475569"}}>Go to Polling Vault → Fetch live polls to populate this screen.</div>
+  </div>;
+
+  const trend=approval.trend||[];
+  const W=520,H=160,PAD={t:12,r:12,b:28,l:36};
+  const cW=W-PAD.l-PAD.r,cH=H-PAD.t-PAD.b;
+  const key=metric==="pct"?"ossoff_smooth":"ossoff_smooth";
+  const colKey=metric==="pct"?"collins_smooth":"collins_smooth";
+  const allVals=trend.flatMap((d:any)=>[d.ossoff_smooth,d.collins_smooth].filter(Boolean));
+  const mn=allVals.length>0?Math.floor(Math.min(...allVals)-2):30;
+  const mx=allVals.length>0?Math.ceil(Math.max(...allVals)+2):60;
+  const range=mx-mn||1;
+  const toY=(v:number)=>cH-((v-mn)/range)*cH;
+  const toX=(i:number)=>(i/(Math.max(trend.length-1,1)))*cW;
+
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-      {[{name:"Jon Ossoff",i:"JO",a:47.8,n:3.7,da:1.1,dn:1.6,c:"#3b82f6",r:"Candidate"},{name:"Mike Collins",i:"MC",a:39.2,n:2.4,da:0.6,dn:0.4,c:"#f27070",r:"Opponent"},{name:"Brian Jack",i:"BJ",a:18.3,n:-3.8,da:0.4,dn:-0.2,c:"#f5b944",r:"Tracker"}].map((x,i)=>(
-        <Card key={i} style={{flex:1,minWidth:140}}>
+      {[{name:"Jon Ossoff",i:"JO",a:approval.ossoff,n:approval.lead,da:approval.dOssoff,c:"#3b82f6",r:"Candidate"},
+        {name:"Mike Collins",i:"MC",a:approval.collins,n:approval.collins?-(approval.lead||0):null,da:null,c:"#f27070",r:"Opponent"},
+        {name:"Derek Dooley",i:"DD",a:approval.dooley,n:null,da:null,c:"#f5b944",r:"Opponent"}
+      ].map((x,i)=>(
+        <Card key={i} style={{flex:1,minWidth:140,opacity:x.a?1:0.5}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             <div style={{width:32,height:32,borderRadius:"50%",background:x.c,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff"}}>{x.i}</div>
             <div><div style={{fontSize:12,fontWeight:600,color:"#e2e8f0"}}>{x.name}</div><div style={{fontSize:10,color:"#64748b"}}>{x.r}</div></div>
           </div>
           <div style={{display:"flex",gap:10}}>
-            <div><div style={{fontSize:22,fontWeight:700,color:"#f1f5f9"}}>{x.a.toFixed(1)}<span style={{fontSize:12}}>%</span></div><DeltaBadge v={x.da}/></div>
-            <div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:18,fontWeight:700,color:x.n>=0?"#22c55e":"#ef4444"}}>{fmt(x.n)}</div><DeltaBadge v={x.dn}/></div>
+            <div><div style={{fontSize:22,fontWeight:700,color:"#f1f5f9"}}>{x.a?x.a.toFixed(1)+"%" :"—"}</div><div style={{fontSize:10,color:"#64748b"}}>Poll avg</div></div>
+            {x.n!=null&&<div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:16,fontWeight:700,color:x.n>=0?"#22c55e":"#ef4444"}}>{fmt(x.n)}</div><div style={{fontSize:10,color:"#64748b"}}>vs Collins</div></div>}
           </div>
+          {x.da!=null&&<div style={{fontSize:11,color:x.da>=0?"#22c55e":"#ef4444",marginTop:4}}>{x.da>=0?"▲":"▼"} {Math.abs(x.da).toFixed(1)}pts vs prev poll</div>}
         </Card>
       ))}
     </div>
+
     <Card style={{marginBottom:12}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <SL>30-day trend</SL>
-        <div style={{display:"flex",gap:4}}>
-          {["pct","net"].map(m=><div key={m} onClick={()=>setMetric(m)} style={{fontSize:10,padding:"3px 8px",borderRadius:4,cursor:"pointer",background:metric===m?"rgba(59,130,246,0.2)":"transparent",color:metric===m?"#3b82f6":"#475569",border:`1px solid ${metric===m?"rgba(59,130,246,0.4)":"rgba(51,65,85,0.4)"}`}}>{m==="pct"?"Approval %":"Net Approval"}</div>)}
-        </div>
+        <SL>Poll trend — last {approval.pollCount} polls</SL>
+        <div style={{fontSize:10,color:"#475569"}}>Source: FiveThirtyEight · {approval.latestPoll?.display_name} {approval.latestPoll?.poll_date}</div>
       </div>
-      <div style={{display:"flex",gap:14,marginBottom:8}}>{[["#3b82f6","Ossoff"],["#f27070","Collins"]].map(([c,l])=><span key={l} style={{fontSize:10,color:c}}>● {l}</span>)}</div>
-      <ApprovalChart metric={metric}/>
+      <div style={{display:"flex",gap:14,marginBottom:8}}>{[["#3b82f6","Ossoff"],["#f27070","Collins"]].map(([c,l])=><span key={l as string} style={{fontSize:10,color:c as string}}>● {l as string}</span>)}</div>
+      {trend.length>1?<svg width="100%" viewBox={"0 0 "+W+" "+H}>
+        <g transform={"translate("+PAD.l+","+PAD.t+")"}>
+          {[mn,Math.round(mn+range/2),mx].map((v:number)=><g key={v}>
+            <line x1={0} y1={toY(v)} x2={cW} y2={toY(v)} stroke="rgba(51,65,85,0.3)" strokeDasharray="3,4"/>
+            <text x={-6} y={toY(v)+4} textAnchor="end" fontSize={9} fill="#475569">{v}%</text>
+          </g>)}
+          {(["ossoff_smooth","collins_smooth"] as const).map((k,ki)=>{
+            const color=ki===0?"#3b82f6":"#f27070";
+            const pts=trend.filter((d:any)=>d[k]!=null).map((d:any,i:number)=>toX(trend.indexOf(d))+","+toY(d[k])).join(" ");
+            return pts?<polyline key={k} points={pts} fill="none" stroke={color} strokeWidth={ki===0?2:1.5}/>:null;
+          })}
+          {trend.map((d:any,i:number)=><text key={i} x={toX(i)} y={cH+16} textAnchor="middle" fontSize={8} fill="#475569">{d.date?.slice(5)}</text>)}
+        </g>
+      </svg>:<div style={{padding:20,textAlign:"center",color:"#475569",fontSize:12}}>Not enough poll data for trend. Fetch polls to populate.</div>}
     </Card>
+
     <Card>
-      <SL>Demographic breakdown</SL>
-      {CANDIDATE.demos.map((d,i)=>(
-        <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-          <div style={{width:130,fontSize:11,color:"#94a3b8"}}>{d.label}</div>
-          <div style={{flex:1,position:"relative",height:6,background:"rgba(51,65,85,0.4)",borderRadius:3,overflow:"hidden"}}>
-            <div style={{position:"absolute",left:d.net>=0?"50%":`${50+(d.net/80)*50}%`,width:`${Math.abs(d.net)/80*50}%`,height:"100%",background:d.net>=0?"#3b82f6":"#ef4444",borderRadius:3}}/>
-            <div style={{position:"absolute",left:"50%",top:0,width:1,height:"100%",background:"rgba(100,116,139,0.5)"}}/>
-          </div>
-          <div style={{width:40,fontSize:11,fontWeight:600,color:d.net>=0?"#22c55e":"#ef4444",textAlign:"right"}}>{fmt(d.net)}</div>
-          <DeltaBadge v={d.delta}/>
+      <SL>Latest poll — {approval.latestPoll?.display_name}</SL>
+      {approval.latestPoll?<div>
+        <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>{approval.latestPoll.poll_date} · {approval.latestPoll.population?.toUpperCase()} · n={approval.latestPoll.sample_size?.toLocaleString()}</div>
+        <div style={{display:"flex",gap:20}}>
+          {[["Ossoff",approval.latestPoll.ossoff_pct,"#3b82f6"],["Collins",approval.latestPoll.collins_pct,"#f27070"],["Dooley",approval.latestPoll.dooley_pct,"#f5b944"]].map(([n,v,c])=>v?<div key={n as string}><div style={{fontSize:22,fontWeight:700,color:c as string}}>{(v as number).toFixed(1)}%</div><div style={{fontSize:10,color:"#64748b"}}>{n}</div></div>:null)}
         </div>
-      ))}
+      </div>:<div style={{fontSize:11,color:"#475569"}}>No poll data. Fetch polls first.</div>}
     </Card>
   </div>;
 }
 
 function OppositionScreen() {
+  const [polls,setPolls]=useState<any[]>([]);
+  const [approval,setApproval]=useState<any>(null);
   const [sel,setSel]=useState(0);
-  const opp=OPPONENTS[sel];
+  const [loading,setLoading]=useState(true);
+
+  const getLiveNarratives=()=>{
+    try{const c=sessionStorage.getItem("polis_narratives");if(c){const d=JSON.parse(c);if(d.narratives?.length)return d.narratives;}}catch(e){}
+    return NARRATIVES_SEED;
+  };
+  const narratives=getLiveNarratives();
+  const negativeNarratives=narratives.filter((n:any)=>n.sentiment==="negative").sort((a:any,b:any)=>b.vel-a.vel);
+
+  useEffect(()=>{
+    Promise.all([
+      fetch("/api/polls").then(r=>r.json()).catch(()=>({polls:[]})),
+      fetch("/api/approval").then(r=>r.json()).catch(()=>null),
+    ]).then(([p,a])=>{
+      setPolls(p.polls||[]);
+      setApproval(a);
+      setLoading(false);
+    });
+  },[]);
+
+  const opponents=[
+    {name:"Mike Collins",short:"Collins",initials:"MC",color:"#f27070",label:"GOP primary leader",role:"opponent",
+     approval:approval?.collins,lead:approval?.lead,
+     handle:"@mikecollinsga"},
+    {name:"Derek Dooley",short:"Dooley",initials:"DD",color:"#f5b944",label:"GOP primary candidate",role:"tracker",
+     approval:approval?.dooley,lead:approval?.dooley&&approval?.ossoff?parseFloat((approval.ossoff-approval.dooley).toFixed(1)):null,
+     handle:"@dooleyga"},
+  ];
+  const opp=opponents[sel];
+
+  const attackLines=negativeNarratives.slice(0,4).map((n:any)=>({
+    line:n.label, vol:n.vol, vel:"+"+n.vel, trend:n.vel>15?"rising":"stable",
+    src:n.sources?.[0]?.type||"broadcast"
+  }));
+
+  if(loading)return <div style={{maxWidth:720,padding:40,textAlign:"center",color:"#475569"}}>Loading opposition data...</div>;
+
   return <div style={{maxWidth:720}}>
     <div style={{display:"flex",gap:8,marginBottom:16}}>
-      {OPPONENTS.map((o,i)=>(
-        <div key={i} onClick={()=>setSel(i)} style={{flex:1,padding:"10px 14px",borderRadius:8,cursor:"pointer",border:`1px solid ${sel===i?o.color:"rgba(51,65,85,0.5)"}`,background:sel===i?`${o.color}18`:"rgba(15,23,42,0.5)"}}>
+      {opponents.map((o,i)=>(
+        <div key={i} onClick={()=>setSel(i)} style={{flex:1,padding:"10px 14px",borderRadius:8,cursor:"pointer",border:"1px solid "+(sel===i?o.color:"rgba(51,65,85,0.5)"),background:sel===i?o.color+"18":"rgba(15,23,42,0.5)"}}>
           <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{o.short}</div>
           <div style={{fontSize:10,color:"#64748b"}}>{o.label}</div>
-          <div style={{fontSize:18,fontWeight:700,color:o.color,marginTop:4}}>{o.approval?.toFixed(1)}%</div>
+          <div style={{fontSize:18,fontWeight:700,color:o.color,marginTop:4}}>{o.approval?o.approval.toFixed(1)+"%":"—"}</div>
         </div>
       ))}
     </div>
+
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-      <Card><div style={{fontSize:11,color:"#64748b",marginBottom:4}}>Our lead over {opp.short}</div><div style={{fontSize:32,fontWeight:800,color:"#22c55e"}}>{fmt(CANDIDATE.approval-opp.approval,1)}<span style={{fontSize:16}}>pts</span></div></Card>
-      <Card><div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{opp.short} net approval</div><div style={{fontSize:32,fontWeight:800,color:opp.net>=0?"#22c55e":"#ef4444"}}>{fmt(opp.net)}</div><DeltaBadge v={opp.dNet}/></Card>
+      <Card>
+        <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>Our lead over {opp.short}</div>
+        <div style={{fontSize:32,fontWeight:800,color:"#22c55e"}}>{opp.lead!=null?opp.lead.toFixed(1)+"pts":"—"}</div>
+        <div style={{fontSize:10,color:"#475569",marginTop:4}}>Computed from {polls.length} polls · FiveThirtyEight</div>
+      </Card>
+      <Card>
+        <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{opp.short} poll average</div>
+        <div style={{fontSize:32,fontWeight:800,color:opp.color}}>{opp.approval?opp.approval.toFixed(1)+"%":"—"}</div>
+        <div style={{fontSize:10,color:"#475569",marginTop:4}}>{polls.length} polls in signal</div>
+      </Card>
     </div>
+
     <Card style={{marginBottom:12}}>
-      <SL>Demographics</SL>
-      {opp.demos.map((d,i)=>(
-        <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
-          <div style={{width:140,fontSize:11,color:"#94a3b8"}}>{d.label}</div>
-          <div style={{flex:1}}><MiniBar val={Math.max(0,d.net+70)} max={140} color={d.net>=0?opp.color:"#475569"} h={5}/></div>
-          <div style={{width:40,fontSize:11,fontWeight:600,color:d.net>=0?opp.color:"#ef4444",textAlign:"right"}}>{fmt(d.net)}</div>
+      <SL>Poll-by-poll breakdown</SL>
+      {polls.slice(0,6).map((p:any,i:number)=>(
+        <div key={i} style={{display:"flex",gap:10,alignItems:"center",padding:"6px 0",borderBottom:i<5?"1px solid rgba(51,65,85,0.2)":"none"}}>
+          <div style={{width:120,fontSize:11,color:"#94a3b8",flexShrink:0}}>{p.display_name}</div>
+          <div style={{fontSize:10,color:"#475569",width:70,flexShrink:0}}>{p.poll_date}</div>
+          <div style={{flex:1,display:"flex",height:6,borderRadius:2,overflow:"hidden"}}>
+            {p.ossoff_pct&&<div style={{width:p.ossoff_pct+"%",background:"#3b82f6"}}/>}
+            {p.collins_pct&&<div style={{width:p.collins_pct+"%",background:"#f27070"}}/>}
+          </div>
+          <div style={{fontSize:11,color:"#3b82f6",width:32,textAlign:"right",flexShrink:0}}>{p.ossoff_pct?.toFixed(0)}%</div>
+          <div style={{fontSize:11,color:opp.color,width:32,flexShrink:0}}>{sel===0?p.collins_pct?.toFixed(0):p.dooley_pct?.toFixed(0)}%</div>
         </div>
       ))}
+      {polls.length===0&&<div style={{fontSize:12,color:"#475569",padding:"10px 0"}}>No polls loaded. Go to Polling Vault and fetch polls.</div>}
     </Card>
-    <Card style={{marginBottom:12}}>
-      <SL>Vulnerabilities</SL>
-      {opp.vulnerabilities.map((v,i)=><div key={i} style={{fontSize:12,color:"#cbd5e1",padding:"5px 0",borderBottom:i<opp.vulnerabilities.length-1?"1px solid rgba(51,65,85,0.3)":"none"}}><span style={{color:"#f59e0b",marginRight:6}}>◆</span>{v}</div>)}
-    </Card>
-    {opp.attackLines.length>0&&<Card>
-      <SL>Active attack lines</SL>
-      {opp.attackLines.map((a,i)=>(
-        <div key={i} style={{padding:"8px 0",borderBottom:i<opp.attackLines.length-1?"1px solid rgba(51,65,85,0.3)":"none"}}>
+
+    <Card>
+      <SL>Active attack lines — from live narratives</SL>
+      {attackLines.length>0?attackLines.map((a:any,i:number)=>(
+        <div key={i} style={{padding:"8px 0",borderBottom:i<attackLines.length-1?"1px solid rgba(51,65,85,0.3)":"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <div style={{fontSize:12,color:"#e2e8f0",fontStyle:"italic"}}>"{a.line}"</div>
+            <div style={{fontSize:12,color:"#e2e8f0",fontStyle:"italic",flex:1,paddingRight:8}}>"{a.line}"</div>
             <Badge label={a.trend} color={a.trend==="rising"?"#ef4444":"#64748b"} bg={a.trend==="rising"?"rgba(239,68,68,0.1)":"rgba(51,65,85,0.3)"}/>
           </div>
           <div style={{display:"flex",gap:12}}>
             <span style={{fontSize:10,color:"#64748b"}}>Vol: <strong style={{color:"#94a3b8"}}>{a.vol}</strong></span>
             <span style={{fontSize:10,color:"#64748b"}}>Vel: <strong style={{color:"#f97316"}}>{a.vel}</strong></span>
+            <span style={{fontSize:10,color:"#64748b"}}>Via live narratives</span>
           </div>
         </div>
-      ))}
-    </Card>}
+      )):<div style={{fontSize:12,color:"#475569",padding:"8px 0"}}>Fetch live narratives to see active attack lines.</div>}
+    </Card>
   </div>;
 }
 
 function PollingVaultScreen() {
-  const [polls,setPolls]=useState(BASE_POLLS);
-  const [showUpload,setShowUpload]=useState(false);
-  const [uploading,setUploading]=useState(false);
-  const [extracted,setExtracted]=useState(false);
+  const [polls,setPolls]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [fetching,setFetching]=useState(false);
   const [selPoll,setSelPoll]=useState<string|null>(null);
-  const inSignal=polls.filter(p=>p.status==="in_signal");
-  const totalW=inSignal.reduce((s,p)=>s+p.weight,0);
-  const baseline=inSignal.reduce((s,p)=>s+p.ossoff*p.weight,0)/totalW;
-  const doUpload=()=>{setUploading(true);setTimeout(()=>{setUploading(false);setExtracted(true);},1800);};
-  const confirmPoll=()=>{setPolls(prev=>[...prev.filter(p=>p.id!=="pp1c"),{...PENDING_POLL,status:"in_signal",weight:20,id:"pp1c"} as any]);setShowUpload(false);setExtracted(false);};
+  const [error,setError]=useState<string|null>(null);
+  const [source,setSource]=useState<string|null>(null);
+  const [approval,setApproval]=useState<any>(null);
+
+  const loadPolls=async(force=false)=>{
+    setFetching(true);
+    setError(null);
+    try{
+      const res=await fetch("/api/polls"+(force?"?refresh=true":""));
+      const data=await res.json();
+      if(data.error)throw new Error(data.error);
+      setPolls(data.polls||[]);
+      setSource(data.source||null);
+      // Also refresh approval
+      const aRes=await fetch("/api/approval");
+      const aData=await aRes.json();
+      if(!aData.error)setApproval(aData);
+    }catch(e:any){setError(e.message);}
+    setFetching(false);
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadPolls(false);},[]);
+
+  const inSignal=polls.filter((p:any)=>p.ossoff_pct&&p.collins_pct);
+
   return <div style={{maxWidth:720}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <div><div style={{fontSize:11,color:"#64748b"}}>Blended signal baseline</div><div style={{fontSize:32,fontWeight:800,color:"#f1f5f9"}}>{baseline.toFixed(1)}<span style={{fontSize:16}}>%</span></div><div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls in signal</div></div>
-      <div onClick={()=>setShowUpload(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>+ Upload private poll</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+      <div>
+        <div style={{fontSize:11,color:"#64748b"}}>Blended signal baseline</div>
+        <div style={{fontSize:32,fontWeight:800,color:"#f1f5f9"}}>{approval?.ossoff?approval.ossoff.toFixed(1)+"%":"—"}</div>
+        <div style={{fontSize:11,color:"#64748b"}}>{inSignal.length} polls · Source: FiveThirtyEight</div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <div onClick={()=>loadPolls(true)} style={{background:"rgba(59,130,246,0.15)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontSize:13,color:"#3b82f6",fontWeight:600}}>{fetching?"Fetching...":"⟳ Fetch live polls"}</div>
+      </div>
     </div>
-    {showUpload&&<Card style={{marginBottom:14,border:"1px solid rgba(59,130,246,0.4)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><SL>Upload private poll</SL><div onClick={()=>{setShowUpload(false);setExtracted(false);setUploading(false);}} style={{fontSize:11,color:"#64748b",cursor:"pointer"}}>x</div></div>
-      {!extracted?<div>
-        <div style={{background:"rgba(15,23,42,0.8)",border:"2px dashed rgba(59,130,246,0.3)",borderRadius:8,padding:24,textAlign:"center",marginBottom:12}}><div style={{fontSize:24,marginBottom:8}}>📄</div><div style={{fontSize:13,color:"#94a3b8"}}>Main Street Research Apr 4, 2026.pdf</div></div>
-        {!uploading?<div onClick={doUpload} style={{background:"#3b82f6",borderRadius:6,padding:"10px",textAlign:"center",cursor:"pointer",fontSize:13,color:"#fff",fontWeight:600}}>Extract and analyze with Polis AI</div>:<div style={{background:"rgba(59,130,246,0.1)",borderRadius:6,padding:"10px",textAlign:"center",fontSize:13,color:"#3b82f6"}}>Extracting...</div>}
-      </div>:<div>
-        <div style={{display:"flex",gap:8,marginBottom:10}}><Badge label="94% confidence" color="#22c55e" bg="rgba(34,197,94,0.1)"/><span style={{fontSize:11,color:"#64748b"}}>{PENDING_POLL.method}</span></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
-          {[["Ossoff",PENDING_POLL.ossoff,"#3b82f6"],["Collins",PENDING_POLL.collins,"#f27070"],["Jack",PENDING_POLL.jack,"#f5b944"],["Other",PENDING_POLL.other,"#475569"]].map(([n,v,c])=><div key={n as string} style={{textAlign:"center",background:"rgba(15,23,42,0.6)",borderRadius:6,padding:8}}><div style={{fontSize:18,fontWeight:700,color:c as string}}>{v}%</div><div style={{fontSize:10,color:"#64748b"}}>{n}</div></div>)}
-        </div>
-        <div onClick={confirmPoll} style={{background:"#22c55e",borderRadius:6,padding:"10px",textAlign:"center",cursor:"pointer",fontSize:13,color:"#000",fontWeight:700}}>Confirm and add to signal</div>
-      </div>}
-    </Card>}
-    {polls.map(p=>(
-      <Card key={p.id} style={{marginBottom:8,cursor:"pointer",border:`1px solid ${selPoll===p.id?"rgba(59,130,246,0.5)":"rgba(51,65,85,0.5)"}`}}>
+
+    {error&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",borderRadius:6,padding:"8px 12px",marginBottom:12,fontSize:11,color:"#fca5a5"}}>{error}</div>}
+
+    {loading?<div style={{padding:40,textAlign:"center",color:"#475569"}}>Loading polls...</div>:
+    polls.length===0?<div style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,padding:"20px",textAlign:"center"}}>
+      <div style={{fontSize:14,color:"#e2e8f0",marginBottom:8}}>No polls loaded yet</div>
+      <div style={{fontSize:12,color:"#64748b"}}>Click "Fetch live polls" to pull Georgia 2026 Senate polls from FiveThirtyEight</div>
+    </div>:
+    polls.map((p:any)=>(
+      <Card key={p.id} style={{marginBottom:8,cursor:"pointer",border:"1px solid "+(selPoll===p.id?"rgba(59,130,246,0.5)":"rgba(51,65,85,0.5)")}}>
         <div onClick={()=>setSelPoll(selPoll===p.id?null:p.id)}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div><div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{p.pollster}</div><div style={{fontSize:11,color:"#64748b"}}>{p.date} · {p.method} · n={p.n?.toLocaleString()}</div></div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"#e2e8f0"}}>{p.display_name}</div>
+              <div style={{fontSize:11,color:"#64748b"}}>{p.poll_date} · {p.method||p.population?.toUpperCase()||"Unknown method"} · n={(p.sample_size||"?").toLocaleString()}</div>
+            </div>
             <div style={{display:"flex",gap:6}}>
-              <Badge label={p.type} color={p.type==="private"?"#8b5cf6":p.type==="opposition"?"#f97316":"#3b82f6"} bg={p.type==="private"?"rgba(139,92,246,0.1)":p.type==="opposition"?"rgba(249,115,22,0.1)":"rgba(59,130,246,0.1)"}/>
-              <Badge label={p.status==="in_signal"?"In signal":p.status==="excluded"?"Excluded":p.status} color={p.status==="in_signal"?"#22c55e":"#64748b"} bg={p.status==="in_signal"?"rgba(34,197,94,0.1)":"rgba(51,65,85,0.3)"}/>
+              <Badge label="In signal" color="#22c55e" bg="rgba(34,197,94,0.1)"/>
+              <Badge label="FiveThirtyEight" color="#3b82f6" bg="rgba(59,130,246,0.1)"/>
             </div>
           </div>
           <div style={{display:"flex",gap:16,marginTop:10}}>
-            {[["Ossoff",p.ossoff,"#3b82f6"],["Collins",p.collins,"#f27070"],["Jack",p.jack,"#f5b944"]].map(([n,v,c])=><div key={n as string}><div style={{fontSize:16,fontWeight:700,color:c as string}}>{v}%</div><div style={{fontSize:9,color:"#64748b"}}>{n}</div></div>)}
-            {p.status==="in_signal"&&<div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:11,color:"#64748b"}}>Weight</div><div style={{fontSize:14,fontWeight:700,color:"#94a3b8"}}>{p.weight}%</div></div>}
+            {[["Ossoff",p.ossoff_pct,"#3b82f6"],["Collins",p.collins_pct,"#f27070"],["Dooley",p.dooley_pct,"#f5b944"]].filter(([,v])=>v).map(([n,v,c])=>(
+              <div key={n as string}><div style={{fontSize:16,fontWeight:700,color:c as string}}>{(v as number).toFixed(1)}%</div><div style={{fontSize:9,color:"#64748b"}}>{n}</div></div>
+            ))}
+            {p.ossoff_lead!=null&&<div style={{marginLeft:"auto",textAlign:"right"}}><div style={{fontSize:11,color:"#64748b"}}>Ossoff lead</div><div style={{fontSize:14,fontWeight:700,color:p.ossoff_lead>0?"#22c55e":"#ef4444"}}>{p.ossoff_lead>0?"+":""}{p.ossoff_lead.toFixed(1)}</div></div>}
           </div>
         </div>
-        {selPoll===p.id&&<div><Divider/><div style={{fontSize:12,color:"#94a3b8",fontStyle:"italic",marginBottom:10}}>"{p.takeaway}"</div><SL>Crosstabs</SL>
-          {p.crosstabs.map((ct,i)=>(
-            <div key={i} style={{display:"flex",gap:10,marginBottom:4,alignItems:"center"}}>
-              <div style={{width:150,fontSize:11,color:"#94a3b8"}}>{ct.g}</div>
-              <div style={{flex:1,display:"flex",height:8,borderRadius:2,overflow:"hidden"}}>
-                <div style={{width:`${ct.o}%`,background:"#3b82f6"}}/><div style={{width:`${ct.c}%`,background:"#f27070"}}/>
-              </div>
-              <div style={{fontSize:11,color:"#3b82f6",width:30,textAlign:"right"}}>{ct.o}%</div>
-              <div style={{fontSize:11,color:"#f27070",width:30}}>{ct.c}%</div>
-            </div>
-          ))}
+        {selPoll===p.id&&<div><Divider/>
+          <div style={{display:"flex",gap:10}}>
+            {p.url&&<a href={p.url} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:"#3b82f6",textDecoration:"none"}}>↗ View source</a>}
+          </div>
         </div>}
       </Card>
     ))}
@@ -439,52 +553,101 @@ function PollingVaultScreen() {
 }
 
 function SocialMediaScreen() {
-  const all=[CANDIDATE,...OPPONENTS];
-  const recentPosts=[
-    {who:"Ossoff",platform:"Twitter",content:"Georgia is building again. 12,000 new jobs at the Port of Savannah. Federal investment delivering for our state.",likes:4821,shares:1204,comments:312,time:"3h ago",sent:"positive"},
-    {who:"Ossoff",platform:"Instagram",content:"Visited the Port of Savannah today. The infrastructure investment we secured is already creating jobs.",likes:8930,shares:0,comments:441,time:"5h ago",sent:"positive"},
-    {who:"Collins",platform:"Twitter",content:"Ossoff voted with Biden 96% of the time. Inflation is still hammering Georgia families.",likes:2341,shares:891,comments:188,time:"8h ago",sent:"negative"},
-    {who:"Collins",platform:"Facebook",content:"Join us this week as we take our message of real Georgia values across the state.",likes:1102,shares:203,comments:77,time:"12h ago",sent:"neutral"},
+  const [stats,setStats]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [fetching,setFetching]=useState(false);
+  const [source,setSource]=useState<string|null>(null);
+  const [fetchedAt,setFetchedAt]=useState<string|null>(null);
+
+  const loadStats=async(force=false)=>{
+    setFetching(true);
+    try{
+      const res=await fetch("/api/social"+(force?"?refresh=true":""));
+      const data=await res.json();
+      setStats(data.stats||[]);
+      setSource(data.source||null);
+      setFetchedAt(data.fetchedAt||null);
+    }catch(e){console.error("Social fetch error:",e);}
+    setFetching(false);
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadStats(false);},[]);
+
+  const byCandidate=(candidate:string)=>stats.filter((s:any)=>s.candidate===candidate);
+  const byPlatform=(candidate:string,platform:string)=>stats.find((s:any)=>s.candidate===candidate&&s.platform===platform);
+
+  const fmt=(n:number|null)=>{
+    if(!n)return "—";
+    if(n>=1000000)return (n/1000000).toFixed(1)+"M";
+    if(n>=1000)return (n/1000).toFixed(0)+"k";
+    return n.toLocaleString();
+  };
+
+  const candidates=[
+    {id:"ossoff",name:"Jon Ossoff",color:"#3b82f6",short:"Ossoff"},
+    {id:"collins",name:"Mike Collins",color:"#f27070",short:"Collins"},
+    {id:"dooley",name:"Derek Dooley",color:"#f5b944",short:"Dooley"},
   ];
+
+  const platforms=["twitter","instagram"];
+
   return <div style={{maxWidth:720}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+      <div style={{fontSize:11,color:"#64748b"}}>
+        {fetchedAt?(source==="cache"?"Cached · ":"Live · ")+new Date(fetchedAt).toLocaleString():"Seed data · not yet refreshed"}
+      </div>
+      <div onClick={()=>loadStats(true)} style={{padding:"5px 12px",borderRadius:6,cursor:"pointer",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.3)",fontSize:11,color:"#22c55e",fontWeight:600}}>
+        {fetching?"Fetching...":"⟳ Refresh"}
+      </div>
+    </div>
+
+    {loading?<div style={{padding:40,textAlign:"center",color:"#475569"}}>Loading social data...</div>:<>
+
+    {/* Follower comparison table */}
     <Card style={{marginBottom:12}}>
       <SL>Follower comparison</SL>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-        {[{key:"twitter",label:"Twitter / X",icon:"𝕏"},{key:"instagram",label:"Instagram",icon:"📸"},{key:"facebook",label:"Facebook",icon:"📘"}].map(plat=>(
-          <div key={plat.key} style={{background:"rgba(15,23,42,0.6)",borderRadius:8,padding:12}}>
-            <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>{plat.icon} {plat.label}</div>
-            {all.map((person,i)=>{
-              const val=(person.social as any)?.[plat.key]||0;
-              const growth=(person.social as any)?.[`${plat.key}Growth`]||0;
-              const color=i===0?"#3b82f6":i===1?"#f27070":"#f5b944";
-              return <div key={i} style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color}}>{person.short}</span><span style={{fontSize:11,fontWeight:700,color:"#e2e8f0"}}>{val>=1000?(val/1000).toFixed(0)+"k":val}</span></div>
-                <MiniBar val={val} max={500000} color={color} h={4}/>
-                <div style={{fontSize:9,color:"#22c55e",marginTop:2}}>▲ {growth}% / wk</div>
-              </div>;
-            })}
-          </div>
-        ))}
+      <div style={{display:"grid",gridTemplateColumns:"1fr repeat("+platforms.length+",1fr)",gap:8,marginBottom:8}}>
+        <div/>
+        {platforms.map(p=><div key={p} style={{fontSize:10,fontWeight:700,color:"#475569",textAlign:"center",textTransform:"capitalize" as const}}>{p==="twitter"?"X / Twitter":p}</div>)}
       </div>
-    </Card>
-    <Card>
-      <SL>Recent posts</SL>
-      {recentPosts.map((p,i)=>(
-        <div key={i} style={{padding:"10px 0",borderBottom:i<recentPosts.length-1?"1px solid rgba(51,65,85,0.3)":"none"}}>
-          <div style={{display:"flex",gap:8,marginBottom:4,alignItems:"center"}}>
-            <Badge label={p.who} color={p.who==="Ossoff"?"#3b82f6":"#f27070"} bg={p.who==="Ossoff"?"rgba(59,130,246,0.1)":"rgba(242,112,112,0.1)"}/>
-            <Badge label={p.platform} color="#64748b" bg="rgba(51,65,85,0.3)"/>
-            <span style={{fontSize:10,color:"#475569",marginLeft:"auto"}}>{p.time}</span>
+      {candidates.map(c=>(
+        <div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr repeat("+platforms.length+",1fr)",gap:8,marginBottom:8,alignItems:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:c.color}}/>
+            <span style={{fontSize:12,color:"#e2e8f0"}}>{c.short}</span>
           </div>
-          <div style={{fontSize:12,color:"#cbd5e1",fontStyle:"italic",marginBottom:4}}>"{p.content.slice(0,100)}"</div>
-          <div style={{display:"flex",gap:12}}>
-            <span style={{fontSize:10,color:"#64748b"}}>❤ {p.likes.toLocaleString()}</span>
-            {p.shares>0&&<span style={{fontSize:10,color:"#64748b"}}>↗ {p.shares.toLocaleString()}</span>}
-            <span style={{fontSize:10,color:"#64748b"}}>💬 {p.comments.toLocaleString()}</span>
-          </div>
+          {platforms.map(p=>{
+            const s=byPlatform(c.id,p);
+            return <div key={p} style={{textAlign:"center"}}>
+              <div style={{fontSize:14,fontWeight:700,color:c.color}}>{fmt(s?.followers||null)}</div>
+              {s?.source_url&&<a href={s.source_url} target="_blank" rel="noopener noreferrer" style={{fontSize:9,color:"#3b82f6",textDecoration:"none"}}>↗ profile</a>}
+            </div>;
+          })}
         </div>
       ))}
+      <div style={{marginTop:8,fontSize:10,color:"#334155"}}>
+        {source==="cache"?"Cached data":"Scraped from public profiles"} · {fetchedAt?new Date(fetchedAt).toLocaleDateString():""}
+        {stats.some((s:any)=>!s.followers)&&<span style={{color:"#f97316"}}> · Some profiles could not be scraped — showing last known values</span>}
+      </div>
     </Card>
+
+    {/* Bar chart comparison */}
+    <Card>
+      <SL>Reach comparison — Twitter/X followers</SL>
+      {candidates.map(c=>{
+        const tw=byPlatform(c.id,"twitter");
+        const maxFollowers=Math.max(...candidates.map(x=>byPlatform(x.id,"twitter")?.followers||0));
+        return <div key={c.id} style={{marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+            <span style={{fontSize:12,color:"#e2e8f0"}}>{c.name}</span>
+            <span style={{fontSize:12,fontWeight:700,color:c.color}}>{fmt(tw?.followers||null)}</span>
+          </div>
+          <MiniBar val={tw?.followers||0} max={maxFollowers||1} color={c.color} h={8}/>
+        </div>;
+      })}
+    </Card>
+    </>}
   </div>;
 }
 
