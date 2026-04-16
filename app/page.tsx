@@ -1509,28 +1509,30 @@ function AlertsScreen() {
 
   const ack=(id:string)=>setAcknowledged(prev=>new Set([...prev,id]));
 
-  // Generate alerts from live narratives + hardcoded structural alerts
+  // Generate alerts from ALL live narratives — severity based on velocity
   const narrativeAlerts=narratives
-    .filter((n:any)=>n.vel>10||n.vel<-5)
+    .filter((n:any)=>n.vel!==0)
     .sort((a:any,b:any)=>Math.abs(b.vel)-Math.abs(a.vel))
     .map((n:any)=>({
       id:"n_"+n.id,
-      sev:n.vel>20?"critical":n.vel>10?"high":"medium",
+      sev:Math.abs(n.vel)>15?"critical":Math.abs(n.vel)>7?"high":"medium",
       title:n.sentiment==="negative"
-        ?"Negative narrative surging: "+n.label
-        :"Positive narrative gaining: "+n.label,
+        ?"Negative narrative active: "+n.label
+        :n.sentiment==="positive"
+        ?"Positive narrative gaining: "+n.label
+        :"Mixed narrative: "+n.label,
       body:n.detail+" Vol: "+n.vol+" · Velocity: "+(n.vel>0?"+":"")+n.vel,
       entity:"narrative",
       time:"Live",
       isLive:true,
+      ack:false,
     }));
 
-  // If live narratives are loaded, use only narrative-based alerts
-  // Only fall back to seed if no live narratives fetched yet
   const hasLive=narratives!==NARRATIVES_SEED&&narratives.length>0;
+  // Always show live narrative alerts first, then seed for any extra context
   const allAlerts=hasLive
     ?narrativeAlerts
-    :[...narrativeAlerts,...ALERTS_SEED];
+    :ALERTS_SEED;
   const unacked=allAlerts.filter((a:any)=>!acknowledged.has(a.id)&&!(a as any).ack);
 
   return <div style={{maxWidth:720}}>
